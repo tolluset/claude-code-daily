@@ -25,6 +25,7 @@ Base URL: `http://localhost:3847/api/v1`
 | GET | /sessions/:id | Session detail |
 | PUT | /sessions/:id | Update session |
 | POST | /sessions/:id/bookmark | Toggle bookmark |
+| POST | /sessions/clean-empty | Clean empty sessions (no messages) |
 | DELETE | /sessions/:id | Delete session (cascade messages) |
 
 ### Messages
@@ -65,10 +66,10 @@ Base URL: `http://localhost:3847/api/v1`
 
 | Hook | Purpose |
 |------|---------|
-| `SessionStart` | Start server + register session |
+| `SessionStart` | Start server + register session + cleanup empty sessions |
 | `UserPromptSubmit` | Capture user prompt |
 | `Stop` | Parse transcript on Claude response complete |
-| `SessionEnd` | Handle session end (unused - replaced by Stop) |
+| `SessionEnd` | Mark session as ended + trigger auto-extract insights |
 
 ### OpenCode Plugin Events
 
@@ -79,14 +80,7 @@ Base URL: `http://localhost:3847/api/v1`
 | `message.updated` (role='user') | Save user message (TextPart only) |
 | `message.updated` (role='assistant') | Save assistant message + tokens |
 
-#### Event Mapping with Claude Code Hooks
-
-| Claude Code Hook | OpenCode Event | Purpose |
-|-----------------|------------------|---------|
-| SessionStart | session.created | Register session |
-| UserPromptSubmit | message.updated (role='user') | Save user prompt |
-| Stop | message.updated (role='assistant') | Save assistant response |
-| (none) | session.idle | End session |
+For detailed OpenCode Plugin architecture and implementation, see [ARCHITECTURE.md](ARCHITECTURE.md#opencode-plugin-architecture).
 
 ### SessionStart Core Logic
 
@@ -110,8 +104,44 @@ curl -s -X POST "$SERVER_URL/api/v1/sessions" \
   -H "Content-Type: application/json" \
   -d "{\"session_id\": \"$SESSION_ID\", \"transcript_path\": \"$TRANSCRIPT_PATH\", \"cwd\": \"$CWD\"}"
 
+# 3. Clean empty sessions (async, non-blocking)
+curl -s -X POST "$SERVER_URL/api/v1/sessions/clean-empty" > /dev/null 2>&1 &
+
 exit 0
 ```
+
+**Benefits of Empty Session Cleanup**:
+- Automatically triggered on every new session start
+- Runs in background without blocking session creation
+- No dependency on dashboard access or API usage patterns
+- Keeps database clean without manual intervention
+
+### SessionEnd Core Logic
+
+```bash
+#!/bin/bash
+HOOK_DATA=$(cat)
+SESSION_ID=$(echo "$HOOK_DATA" | jq -r '.session_id')
+
+SERVER_URL="http://localhost:3847"
+
+# 1. Mark session as ended
+curl -s -X POST "$SERVER_URL/api/v1/sessions/$SESSION_ID/end" \
+  -H "Content-Type: application/json"
+
+# 2. Trigger auto-extract insights (async, non-blocking)
+if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+    bash "$SCRIPT_DIR/auto-extract-insights.sh" "$SESSION_ID" &
+fi
+
+exit 0
+```
+
+**Key Features**:
+- Sets `ended_at` timestamp via API
+- Triggers background auto-extract insights if enabled
+- Non-blocking execution (returns immediately)
+- Only runs when session actually ends (not on every turn)
 
 ### Auto Server Shutdown
 
@@ -341,102 +371,7 @@ MessageContent (react-markdown)
 
 ## OpenCode Plugin Implementation
 
-### Plugin Architecture
-
-The OpenCode plugin (`ccd-tracker.ts`) provides session tracking through event-based hooks:
-
-**Location**: `packages/ccd-plugin/.opencode/plugins/ccd-tracker.ts`
-
-**Event Subscriptions**:
-- `session.created`: Register new OpenCode session
-- `message.updated`: Track user/assistant messages
-- `session.idle`: Mark session as ended
-
-### Core Functions
-
-#### Session Registration
-```typescript
-async function registerSession(data: {
-  session_id: string;
-  transcript_path: string;
-  cwd: string;
-  project_name?: string;
-  source: 'claude' | 'opencode';
-}): Promise<void>
-```
-
-- Checks server health via `/api/v1/health`
-- Starts CCD server if not running
-- Registers session with `source='opencode'`
-
-#### Message Saving
-```typescript
-async function saveMessage(data: {
-  session_id: string;
-  uuid?: string;
-  type: 'user' | 'assistant';
-  content?: string;
-  model?: string | null;
-  input_tokens?: number | null;
-  output_tokens?: number | null;
-}): Promise<void>
-```
-
-- Extracts text content from message parts (TextPart only - Option 2a)
-- Saves user/assistant messages
-- Updates daily stats for token usage
-
-#### Content Extraction
-```typescript
-function extractTextContent(parts?: Array<{ type: string; text?: string }>): string {
-  if (!parts) return '';
-  return parts
-    .filter(part => part.type === 'text' && part.text)
-    .map(part => part.text)
-    .join('');
-}
-```
-
-- Filters parts by `type === 'text'`
-- Extracts and concatenates text content
-- Ignores tool calls, files, and other part types (Option 2a: Simple)
-
-#### Session Management
-```typescript
-async function updateSessionSummary(sessionId: string, summary: string): Promise<void>
-async function endSession(sessionId: string): Promise<void>
-```
-
-- First user message used as session summary (Option 3a)
-- Marks session as ended on idle
-
-### Installation
-
-**OpenCode Plugin Directory**:
-```bash
-cp -r /path/to/ccd/packages/ccd-plugin/.opencode ~/.config/opencode/
-```
-
-**Auto-Loading**:
-- OpenCode loads plugins from `~/.config/opencode/plugins/` or `.opencode/plugins/`
-- No manual configuration required
-
-### Key Differences from Claude Code Hooks
-
-| Aspect | Claude Code Hooks | OpenCode Plugin |
-|--------|------------------|------------------|
-| Trigger | Hook JSON input | Plugin event system |
-| Token Data | Transcript parsing | Direct from message.tokens |
-| Server Start | Shell script | Fetch-based health check |
-| Content Extraction | Full transcript | TextPart only (simplified) |
-
-### Future Enhancements
-
-- [ ] Support for complete part content (not just TextPart)
-- [ ] Token caching tracking (tokens.cache.read/write)
-- [ ] Better error handling and retry logic
-- [ ] File change tracking via `file.edited` event
-- [ ] Tool execution tracking via `tool.execute.after`
+For detailed OpenCode Plugin architecture and implementation, see [ARCHITECTURE.md](ARCHITECTURE.md#opencode-plugin-architecture).
 
 ---
 

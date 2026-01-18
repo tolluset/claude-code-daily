@@ -203,20 +203,20 @@ OpenCode uses a plugin-based event system for session tracking. The plugin subsc
 
 ```
 OpenCode Session
-         │
-         ├─→ session.created event → Start server (if needed) → Register session
-         │
-         ├─→ message.updated event → Save user/assistant messages
-         │
-         └─→ session.idle event → End session
-                 │
-                 ▼
-           SQLite DB (~/.ccd/ccd.db)
-                 │
-         ┌───────┴───────────┬───────────┐
-         ▼               ▼           ▼
-     Dashboard         CCD API       OpenCode
-     (React)          (Port 3847)     (Plugin)
+          │
+          ├─→ session.created event → Start server (if needed) → Register session
+          │
+          ├─→ message.updated event → Save user/assistant messages
+          │
+          └─→ session.idle event → End session
+                  │
+                  ▼
+            SQLite DB (~/.ccd/ccd.db)
+                  │
+          ┌───────┴───────────┬───────────┐
+          ▼               ▼           ▼
+      Dashboard         CCD API       OpenCode
+      (React)          (Port 3847)     (Plugin)
 ```
 
 #### Event Mapping
@@ -234,6 +234,52 @@ OpenCode Session
 - **Auto-loaded** by OpenCode from `~/.config/opencode/plugins/`
 - **Dependencies**: `@opencode-ai/plugin` (provided by OpenCode)
 
+#### Core Functions
+
+**Session Registration**:
+```typescript
+async function registerSession(data: {
+  session_id: string;
+  transcript_path: string;
+  cwd: string;
+  project_name?: string;
+  source: 'claude' | 'opencode';
+}): Promise<void>
+```
+- Checks server health via `/api/v1/health`
+- Starts CCD server if not running
+- Registers session with `source='opencode'`
+
+**Message Saving**:
+```typescript
+async function saveMessage(data: {
+  session_id: string;
+  uuid?: string;
+  type: 'user' | 'assistant';
+  content?: string;
+  model?: string | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+}): Promise<void>
+```
+- Extracts text content from message parts (TextPart only)
+- Saves user/assistant messages
+- Updates daily stats for token usage
+
+**Content Extraction**:
+```typescript
+function extractTextContent(parts?: Array<{ type: string; text?: string }>): string {
+  if (!parts) return '';
+  return parts
+    .filter(part => part.type === 'text' && part.text)
+    .map(part => part.text)
+    .join('');
+}
+```
+- Filters parts by `type === 'text'`
+- Extracts and concatenates text content
+- Ignores tool calls, files, and other part types
+
 #### Data Processing
 
 1. **Session Creation**:
@@ -242,41 +288,74 @@ OpenCode Session
    - Register with `source='opencode'`
 
 2. **Message Tracking**:
-   - User messages: Extract `TextPart` content only (Option 2a)
+   - User messages: Extract `TextPart` content only
    - Assistant messages: Extract `TextPart` content + tokens
-   - First user message used as session summary (Option 3a)
+   - First user message used as session summary
 
 3. **Session End**:
    - Update `ended_at` timestamp
    - Clear message cache
+
+#### Key Differences from Claude Code Hooks
+
+| Aspect | Claude Code Hooks | OpenCode Plugin |
+|--------|------------------|------------------|
+| Trigger | Hook JSON input | Plugin event system |
+| Token Data | Transcript parsing | Direct from message.tokens |
+| Server Start | Shell script | Fetch-based health check |
+| Content Extraction | Full transcript | TextPart only (simplified) |
+
+#### Installation
+
+**OpenCode Plugin Directory**:
+```bash
+cp -r /path/to/ccd/packages/ccd-plugin/.opencode ~/.config/opencode/
+```
+
+**Auto-Loading**:
+- OpenCode loads plugins from `~/.config/opencode/plugins/` or `.opencode/plugins/`
+- No manual configuration required
 
 ---
 
 ## Background Cleanup
 
 **Empty Session Removal** (P7-004):
-- Triggered on server startup and API requests
+- Triggered on **SessionStart hook** (asynchronously, non-blocking)
 - Sessions without messages are deleted
 - Daily stats are decremented for affected dates
-- Interval: Every 1 hour of user activity
+- Executes every time a new session starts
+- Also available via API: POST `/api/v1/sessions/clean-empty`
 
 **Implementation**:
 ```typescript
-function performScheduledClean() {
-  if (now - lastCleanupTime < CLEANUP_INTERVAL_MS) return;
-
-  const result = cleanEmptySessions();
-  // Returns: { deleted: string[], dates: string[] }
-  // Deletes sessions with no messages, decrements daily_stats.session_count
+// Service layer (SessionService)
+static cleanEmptySessions(): { deleted: string[]; sessions: string[] } {
+  return cleanEmptySessions();
 }
 
-// Called in API middleware
-app.use('/api/*', (c, next) => {
-  performScheduledClean();
-  resetIdleTimer();
-  return next();
+// API endpoint
+sessions.post('/clean-empty', (c) => {
+  const result = SessionService.cleanEmptySessions();
+  return c.json(successResponse({
+    deleted: result.deleted,
+    count: result.deleted.length,
+    affectedDates: result.sessions
+  }));
 });
 ```
+
+**Hook Integration** (session-start.sh):
+```bash
+# 4. Clean empty sessions (async, non-blocking)
+curl -s -X POST "$CCD_SERVER_URL/api/v1/sessions/clean-empty" > /dev/null 2>&1 &
+```
+
+**Benefits**:
+- Automatic cleanup when users actually use Claude Code
+- No dependency on dashboard access
+- Background execution doesn't block session creation
+- Keeps database clean without manual intervention
 
 ---
 
