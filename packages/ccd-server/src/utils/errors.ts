@@ -48,7 +48,7 @@ export function validateStringEnum(
   fieldName: string
 ): asserts value is string {
   if (!validValues.includes(value)) {
-    throw Errors.InvalidType(fieldName, `one of: ${validValues.join(', ')}`);
+    throw Errors.InvalidType(fieldName, `"${validValues.join('" or "')}"`);
   }
 }
 

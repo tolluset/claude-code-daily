@@ -123,9 +123,11 @@ export function useSearchResults(
   return useQuery({
     queryKey: ['search', params.toString()],
     queryFn: async () => {
+      console.log('Calling search API with params:', params.toString());
       try {
         const response = await fetchApi<ApiResponse<SearchResult[]>>(`/search?${params}`, undefined, DASHBOARD_API_BASE);
-        return response.data;
+        console.log('Search API response:', response);
+        return response.data || [];
       } catch (error) {
         console.error('Search API error:', error);
         throw error;

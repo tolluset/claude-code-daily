@@ -11,6 +11,9 @@ export function SearchPage() {
   const [project, setProject] = useState(searchParams.get('project') || '');
   const [bookmarkedOnly, setBookmarkedOnly] = useState(searchParams.get('bookmarked') === 'true');
 
+  // Debug logging
+  console.log('SearchPage - query:', query, 'searchParams:', Object.fromEntries(searchParams.entries()));
+
   useEffect(() => {
     const currentQuery = searchParams.get('q') || '';
     setSearchInput(currentQuery);
@@ -18,7 +21,7 @@ export function SearchPage() {
     setBookmarkedOnly(searchParams.get('bookmarked') === 'true');
   }, [searchParams]);
 
-  const { data: results, isLoading } = useSearchResults(
+  const { data: results, isLoading, error } = useSearchResults(
     query,
     searchParams.get('from') || undefined,
     searchParams.get('to') || undefined,
@@ -26,6 +29,9 @@ export function SearchPage() {
     bookmarkedOnly,
     20
   );
+
+  console.log('Search debug:', { query, results, isLoading, error, project, bookmarkedOnly });
+  console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,20 +126,20 @@ export function SearchPage() {
          </div>
        )}
 
-      {query && !isLoading && (
+      {query && !isLoading && results && results.length > 0 && (
         <div>
-          <div className="mb-4 flex items-center justify-between text-sm">
-            <div className="text-gray-600">
-              {results?.length === 0 ? (
+          <div className="mb-4 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              {results.length === 0 ? (
                 <span>No results found for "{query}"</span>
               ) : (
-                <span>{results?.length} result{results && results.length !== 1 ? 's' : ''} found for "{query}"</span>
+                <span>{results.length} result{results.length !== 1 ? 's' : ''} found for "{query}"</span>
               )}
             </div>
             <button
               type="button"
               onClick={handleClear}
-              className="flex items-center gap-1 text-gray-600 hover:text-gray-900 text-sm font-medium"
+              className="flex items-center gap-1 text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors px-2 py-1 rounded hover:bg-gray-100"
             >
               <X className="h-4 w-4" />
               Clear
@@ -141,7 +147,7 @@ export function SearchPage() {
           </div>
 
           <div className="space-y-4">
-            {results?.map((result, index) => (
+            {results.map((result, index) => (
               <Card key={`${result.session_id}-${result.message_id}-${index}`} className="p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-start gap-4">
                   <div className="mt-1">

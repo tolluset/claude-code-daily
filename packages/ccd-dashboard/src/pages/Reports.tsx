@@ -5,6 +5,7 @@ import type { DailyStats } from '@ccd/types';
 import { DateRangePicker } from '../components/ui/DateRangePicker';
 import { TokenTrendChart } from '../components/ui/TokenTrendChart';
 import { SessionBarChart } from '../components/ui/SessionBarChart';
+import { ProjectPieChart } from '../components/ui/ProjectPieChart';
 import { Card } from '../components/ui/Card';
 import { Filter } from 'lucide-react';
 
@@ -33,6 +34,32 @@ export function Reports() {
   const totalInputTokens = stats.reduce((sum: number, s: DailyStats) => sum + s.total_input_tokens, 0);
   const totalOutputTokens = stats.reduce((sum: number, s: DailyStats) => sum + s.total_output_tokens, 0);
   const avgSessionsPerDay = stats.length > 0 ? (totalSessions / stats.length).toFixed(1) : '0';
+
+  // Calculate project distribution for pie chart
+  const projectData = (() => {
+    const filteredSessions = selectedProject
+      ? allSessions.filter(s => s.project_name === selectedProject)
+      : allSessions.filter(s => {
+          const sessionDate = new Date(s.started_at);
+          return sessionDate >= dateRange.from && sessionDate <= dateRange.to;
+        });
+
+    const projectCounts: Record<string, number> = {};
+    filteredSessions.forEach(session => {
+      const project = session.project_name || 'Unknown';
+      projectCounts[project] = (projectCounts[project] || 0) + 1;
+    });
+
+    const total = Object.values(projectCounts).reduce((sum, count) => sum + count, 0);
+
+    return Object.entries(projectCounts)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: (value / total) * 100
+      }))
+      .sort((a, b) => b.value - a.value);
+  })();
 
   if (isLoading) {
     return (
@@ -104,7 +131,7 @@ export function Reports() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
         <Card className="p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Token Usage Trend</h2>
           {stats.length > 0 ? (
@@ -123,6 +150,17 @@ export function Reports() {
           ) : (
             <div className="flex items-center justify-center h-[250px] text-gray-500">
               No data available
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Distribution</h2>
+          {projectData.length > 0 ? (
+            <ProjectPieChart data={projectData} height={250} />
+          ) : (
+            <div className="flex items-center justify-center h-[250px] text-gray-500">
+              No project data available
             </div>
           )}
         </Card>

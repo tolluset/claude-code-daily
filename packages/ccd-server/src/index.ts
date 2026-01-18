@@ -1,21 +1,13 @@
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 
-import { health } from './routes/health';
-import { sessions } from './routes/sessions';
-import { messages } from './routes/messages';
-import { stats } from './routes/stats';
-import { sync } from './routes/sync';
-import { search } from './routes/search';
+import { health, sessions, messages, stats, sync, search, setupGlobalMiddleware, setupApiMiddleware } from './routes';
 import { resetIdleTimer, getIdleTimeMs } from './utils/timeout';
 import { writePidFile, isServerRunning } from './utils/pid';
 import { DATA_DIR, DB_PATH } from './db';
 import { cleanEmptySessions } from './db/queries';
-import { apiErrorHandler } from './utils/responses';
 import { SERVER_PORT, DEFAULT_CLEANUP_INTERVAL_MS } from '@ccd/types';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.argv.includes('--watch');
@@ -80,17 +72,9 @@ function performScheduledClean() {
 
 const app = new Hono();
 
-// Middleware
-app.use('*', cors());
-app.use('*', logger());
-
-// API middleware
-app.use('/api/*', apiErrorHandler());
-app.use('/api/*', (c, next) => {
-  performScheduledClean();
-  resetIdleTimer();
-  return next();
-});
+// Setup middleware
+setupGlobalMiddleware(app);
+setupApiMiddleware(app, performScheduledClean, resetIdleTimer);
 
 // API routes (must be defined first)
 app.route('/api/v1/health', health);

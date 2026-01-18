@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { SessionService } from '../services';
-import { parseIntParam, parseBoolParam } from '../utils/params';
+import { parseIntParam, parseBoolParam } from '../utils/query-parsers';
 import { successResponse, errorResponse, notFoundResponse } from '../utils/responses';
+import { ApiError } from '../utils/errors';
 import type {
   ApiResponse,
   Session,
@@ -42,61 +43,110 @@ sessions.get('/', (c) => {
 
 // Create session
 sessions.post('/', async (c) => {
-  const body = await c.req.json<CreateSessionRequest>();
-  const session = SessionService.createSession(body);
-  return c.json(successResponse(session), 201);
+  try {
+    const body = await c.req.json<CreateSessionRequest>();
+    const session = SessionService.createSession(body);
+    return c.json(successResponse(session), 201);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return c.json(errorResponse(error.message), { status: error.statusCode } as any);
+    }
+    throw error;
+  }
 });
 
 // Get session details
 sessions.get('/:id', (c) => {
-  const id = c.req.param('id');
-  const session = SessionService.getSession(id);
-  return c.json(successResponse(session));
+  try {
+    const id = c.req.param('id');
+    const session = SessionService.getSession(id);
+    return c.json(successResponse(session));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return c.json(errorResponse(error.message), { status: error.statusCode } as any);
+    }
+    throw error;
+  }
 });
 
 // End session
 sessions.post('/:id/end', (c) => {
-  const id = c.req.param('id');
-  const session = SessionService.endSession(id);
-  return c.json(successResponse(session));
+  try {
+    const id = c.req.param('id');
+    const session = SessionService.endSession(id);
+    return c.json(successResponse(session));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return c.json(errorResponse(error.message), { status: error.statusCode } as any);
+    }
+    throw error;
+  }
 });
 
 // Update session summary
 sessions.post('/:id/summary', async (c) => {
-  const id = c.req.param('id');
-  const body = await c.req.json<{ summary?: string }>();
-  const session = SessionService.updateSessionSummary(id, body.summary || '');
-  return c.json(successResponse(session));
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json<{ summary?: string }>();
+    const session = SessionService.updateSessionSummary(id, body.summary || '');
+    return c.json(successResponse(session));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return c.json(errorResponse(error.message), { status: error.statusCode } as any);
+    }
+    throw error;
+  }
 });
 
 // Toggle bookmark
 sessions.post('/:id/bookmark', async (c) => {
-  const id = c.req.param('id');
-  let note: string | undefined;
-
   try {
-    const body = await c.req.json<BookmarkRequest>();
-    note = body.note;
-  } catch {
-    // Body is optional
-  }
+    const id = c.req.param('id');
+    let note: string | undefined;
 
-  const session = SessionService.toggleBookmark(id, note);
-  return c.json(successResponse(session));
+    try {
+      const body = await c.req.json<BookmarkRequest>();
+      note = body.note;
+    } catch {
+      // Body is optional
+    }
+
+    const session = SessionService.toggleBookmark(id, note);
+    return c.json(successResponse(session));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return c.json(errorResponse(error.message), { status: error.statusCode } as any);
+    }
+    throw error;
+  }
 });
 
 // Delete session
 sessions.delete('/:id', (c) => {
-  const id = c.req.param('id');
-  SessionService.deleteSession(id);
-  return c.json(successResponse({ deleted: true }));
+  try {
+    const id = c.req.param('id');
+    SessionService.deleteSession(id);
+    return c.json(successResponse({ deleted: true }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return c.json(errorResponse(error.message), { status: error.statusCode } as any);
+    }
+    throw error;
+  }
 });
 
 // List messages for a session
 sessions.get('/:id/messages', (c) => {
-  const id = c.req.param('id');
-  const messageList = SessionService.getSessionMessages(id);
-  return c.json(successResponse(messageList));
+  try {
+    const id = c.req.param('id');
+    const messageList = SessionService.getSessionMessages(id);
+    return c.json(successResponse(messageList));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return c.json(errorResponse(error.message), { status: error.statusCode } as any);
+    }
+    throw error;
+  }
 });
 
 export { sessions };

@@ -69,6 +69,7 @@ ccd/
 | `src/components/ui/DateRangePicker.tsx` | ✅ | Date range selection component |
 | `src/components/ui/TokenTrendChart.tsx` | ✅ | Line chart for token usage trends |
 | `src/components/ui/SessionBarChart.tsx` | ✅ | Bar chart for session counts |
+| `src/components/ui/ProjectPieChart.tsx` | ✅ | Pie chart for project distribution |
 | `src/components/ui/DiffView.tsx` | ✅ | Code diff visualization component |
 | `src/pages/Dashboard.tsx` | ✅ | Main dashboard (stats + recent sessions) |
 | `src/pages/Sessions.tsx` | ✅ | Session list with filters (date, project) |
@@ -170,14 +171,13 @@ ccd/
 See [TASKS.md](TASKS.md) for detailed task management.
 
 Immediate priorities:
-1. **C-001**: Commit v0.1.0 release (includes Phase 5, 6, 8, 10)
-2. **P5-008**: Create ProjectPieChart component (Phase 5 completion)
-3. **P7-001**: Dashboard production build setup
-4. **P8-002**: Add E2E tests for hooks
-5. **C-002**: Update README with latest features
+1. **C-002**: Update README with latest features (v0.1.0 + Phase 5)
+2. **P7-001**: Dashboard production build setup
+3. **P8-002**: Add E2E tests for hooks
+4. **P7-003**: Add *bun-build to .gitignore
 
 **Recent Achievements**:
+- ✅ Phase 5 (Enhanced Statistics): Complete with all 3 charts (Token, Session, Project)
 - ✅ Phase 10 (Full-Text Search): Complete FTS5-based search
 - ✅ Phase 6 (Enhanced Filtering): All filters implemented
 - ✅ Phase 8 (Testing): 29 tests passing
-- 🚧 Phase 5 (Statistics): 90% complete (ProjectPieChart pending)

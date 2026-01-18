@@ -1,6 +1,7 @@
 import { db } from './index';
 import { randomUUID } from 'node:crypto';
 import { QueryBuilder } from './query-builder';
+import { withTransaction } from './transaction';
 import type {
   Session,
   Message,
@@ -95,17 +96,15 @@ export function deleteSession(id: string): boolean {
   const session = getSession(id);
   if (!session) return false;
 
-  // Delete messages first, then session
-  const deleteMessagesStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
-  const deleteSessionStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
+  return withTransaction(() => {
+    // Delete messages first, then session
+    const deleteMessagesStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
+    const deleteSessionStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
 
-  const transaction = db.transaction(() => {
     deleteMessagesStmt.run(id);
     deleteSessionStmt.run(id);
-  });
-
-  transaction();
-  return true;
+    return true;
+  }, `Delete session ${id}`);
 }
 
 export function updateSessionSummary(id: string, summary: string): Session | null {
@@ -241,14 +240,14 @@ export function cleanEmptySessions(): { deleted: string[]; sessions: string[] } 
     FROM sessions
     WHERE id NOT IN (SELECT DISTINCT session_id FROM messages)
   `);
-  
+
   const emptySessions = findEmptySessionsStmt.all() as { id: string; date: string }[];
   const deleted: string[] = [];
   const dates: string[] = [];
 
   const deleteSessionStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
 
-  const transaction = db.transaction(() => {
+  withTransaction(() => {
     for (const session of emptySessions) {
       deleteSessionStmt.run(session.id);
       deleted.push(session.id);
@@ -256,9 +255,7 @@ export function cleanEmptySessions(): { deleted: string[]; sessions: string[] } 
         dates.push(session.date);
       }
     }
-  });
-
-  transaction();
+  }, `Clean ${emptySessions.length} empty sessions`);
 
   for (const date of dates) {
     decrementSessionCount(date);
@@ -293,7 +290,7 @@ export function bulkInsertMessages(messages: CreateMessageRequest[]): number {
     ON CONFLICT(uuid) DO NOTHING
   `);
 
-  const transaction = db.transaction(() => {
+  withTransaction(() => {
     for (const msg of messages) {
       stmt.run(
         msg.session_id,
@@ -305,9 +302,7 @@ export function bulkInsertMessages(messages: CreateMessageRequest[]): number {
         msg.output_tokens || null
       );
     }
-  });
-
-  transaction();
+  }, `Bulk insert ${messages.length} messages for session ${sessionId}`);
 
   // Get count after insert
   const afterCount = (countStmt.get(sessionId) as { count: number })?.count || 0;

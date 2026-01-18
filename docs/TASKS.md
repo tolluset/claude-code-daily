@@ -6,6 +6,10 @@
 ## Development Log
 
 ### 2026-01-19
+- **Phase 5**: Enhanced Statistics complete ✅
+  - P5-008: ProjectPieChart component with 10-color palette
+  - Responsive 3-column chart layout (TokenTrend, SessionBar, ProjectPie)
+  - Project distribution visualization with percentage labels
 - **Phase 10**: Full-text search feature complete ✅
   - P10-001: FTS5 database migration (003_add_fts_search)
   - P10-002: searchSessions() with BM25 ranking algorithm
@@ -123,9 +127,9 @@ This document tracks all development tasks for the CCD project, organized by pha
 
 ---
 
-## Phase 5: Enhanced Statistics 🚧
+## Phase 5: Enhanced Statistics ✅
 
-**Status**: In Progress
+**Status**: Complete
 
 ### API Tasks
 
@@ -143,7 +147,7 @@ This document tracks all development tasks for the CCD project, organized by pha
 | P5-005 | Install recharts library | P0 | ✅ | None | pnpm add recharts -F ccd-dashboard |
 | P5-006 | Create TokenTrendChart component | P0 | ✅ | P5-005 | Line chart for daily tokens |
 | P5-007 | Create SessionBarChart component | P0 | ✅ | P5-005 | Bar chart for sessions per day |
-| P5-008 | Create ProjectPieChart component | P1 | ⬜ | P5-005 | Distribution by project |
+| P5-008 | Create ProjectPieChart component | P1 | ✅ | P5-005 | Distribution by project |
 
 ### Reports Page
 
@@ -289,7 +293,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | Phase 2: Plugin Development | ✅ Complete | 6/6 (100%) |
 | Phase 3: MCP Development | ✅ Complete | 6/6 (100%) |
 | Phase 4: Dashboard (MVP) | ✅ Complete | 6/6 (100%) |
-| Phase 5: Enhanced Statistics | 🚧 In Progress | 9/10 (90%) |
+| Phase 5: Enhanced Statistics | ✅ Complete | 10/10 (100%) |
 | Phase 6: Enhanced Filtering | ✅ Complete | 3/3 (100%) |
 | Phase 7: Infrastructure Improvements | 🚧 In Progress | 2/4 (50%) |
 | Phase 8: Quality & Testing | 🚧 In Progress | 2/3 (67%) |
@@ -301,10 +305,10 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | Priority | Total | Completed | In Progress | Todo |
 |----------|-------|-----------|-------------|------|
 | P0 (Critical) | 18 | 12 | 0 | 6 |
-| P1 (High) | 19 | 17 | 0 | 2 |
+| P1 (High) | 19 | 18 | 0 | 1 |
 | P2 (Medium) | 9 | 1 | 0 | 8 |
 | P3 (Low) | 4 | 0 | 0 | 4 |
-| **Total** | **50** | **30** | **0** | **20** |
+| **Total** | **50** | **31** | **0** | **19** |
 
 ---
 
@@ -350,10 +354,10 @@ Cleanup
 
 ## Next Immediate Actions
 
-1. **[C-001]** Commit pending changes (v0.1.0 + Search feature)
-2. **[P5-008]** Create ProjectPieChart component
-3. **[P7-001]** Dashboard production build setup
-4. **[P8-002]** Add E2E tests for hooks
+1. **[C-002]** Update README with latest features
+2. **[P7-001]** Dashboard production build setup
+3. **[P8-002]** Add E2E tests for hooks
+4. **[P7-003]** Add *bun-build to .gitignore
 
 ---
 
@@ -361,8 +365,8 @@ Cleanup
 
 | Milestone | Target | Status |
 |-----------|--------|--------|
-| MVP Release (v0.1.0) | 2026-01-19 | ✅ Ready for Commit |
-| Phase 5 (Enhanced Statistics) | 2026-01-19 | 🚧 90% (ProjectPieChart pending) |
+| MVP Release (v0.1.0) | 2026-01-19 | ✅ Complete |
+| Phase 5 (Enhanced Statistics) | 2026-01-19 | ✅ Complete |
 | Phase 6 (Enhanced Filtering) | 2026-01-19 | ✅ Complete |
 | Phase 10 (Full-Text Search) | 2026-01-19 | ✅ Complete |
 | Production Ready | TBD | ⬜ Planned |
