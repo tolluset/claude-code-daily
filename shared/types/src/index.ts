@@ -40,6 +40,9 @@ export interface Message {
   model: string | null;
   input_tokens: number | null;
   output_tokens: number | null;
+  input_cost: number | null;
+  output_cost: number | null;
+  is_estimated_cost: boolean;
   timestamp: string;
 }
 
@@ -60,6 +63,8 @@ export interface DailyStats {
   message_count: number;
   total_input_tokens: number;
   total_output_tokens: number;
+  total_input_cost: number;
+  total_output_cost: number;
 }
 
 // Streak stats types

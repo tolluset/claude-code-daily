@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from './Card';
 import type { SessionInsight } from '@ccd/types';
 
@@ -26,9 +27,12 @@ export function SessionInsights({ insight, onNotesUpdate, onDelete }: SessionIns
     try {
       await onNotesUpdate(notes);
       setIsEditingNotes(false);
+      toast.success('Notes saved successfully');
     } catch (error) {
       console.error('Failed to save notes:', error);
-      alert('Failed to save notes');
+      toast.error('Failed to save notes', {
+        description: 'Please try again',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -40,9 +44,12 @@ export function SessionInsights({ insight, onNotesUpdate, onDelete }: SessionIns
 
     try {
       await onDelete();
+      toast.success('Insight deleted successfully');
     } catch (error) {
       console.error('Failed to delete insight:', error);
-      alert('Failed to delete insight');
+      toast.error('Failed to delete insight', {
+        description: 'Please try again',
+      });
     }
   };
 

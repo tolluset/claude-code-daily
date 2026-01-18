@@ -6,6 +6,16 @@
 ## Development Log
 
 ### 2026-01-19
+- **Phase 11**: AI Session Insights - Full automation ✅
+  - P11-011: MCP tools (get_session_content, save_session_insights)
+  - P11-012: SessionInsights UI component with edit/delete
+  - P11-013: "Generate Insights" button in SessionDetail
+  - P11-014: /extract-insights slash command
+  - P11-015: Auto-extract on Stop hook (optional, config-based)
+  - Complete workflow: Manual → Auto → View → Edit
+- **Phase 11**: Coding Streak Tracker ✅
+  - P11-001: getStreakStats() backend + API
+  - P11-005: StreakBadge component with tooltip
 - **Phase 5**: Enhanced Statistics complete ✅
   - P5-008: ProjectPieChart component with 10-color palette
   - Responsive 3-column chart layout (TokenTrend, SessionBar, ProjectPie)
@@ -19,6 +29,12 @@
   - P10-006: search_sessions MCP tool
   - P10-007: SearchResult and SearchOptions type definitions
   - See: docs/SEARCH_IMPLEMENTATION.md
+- **Bugfix**: React Query cache invalidation issue ✅
+  - Fixed bookmark state not updating in list view after toggling on detail page
+  - Updated SessionDetail.tsx to invalidate all related queries (['sessions'], ['search'])
+  - Updated Sessions.tsx for consistency
+  - Created docs/DEVELOPMENT_GUIDELINES.md with cache invalidation rules
+  - Prevents similar issues in future mutations
 - **P8-001**: Added unit tests for server routes (22 tests)
   - health.test.ts: Health check endpoint
   - sessions.test.ts: Session CRUD operations
@@ -295,16 +311,18 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | P11-006 | Cost Dashboard cards | P1 | ⬜ | P11-002 | Daily/monthly cost display |
 | P11-007 | Heatmap Calendar | P2 | ⬜ | None | GitHub-style activity calendar |
 | P11-008 | Tags UI (add/remove/filter) | P2 | ⬜ | P11-003 | Session tagging interface |
-| P11-012 | Insights UI (view/edit) | P1 | ⬜ | P11-011 | SessionInsights component + SessionDetail integration |
-| P11-013 | Auto-extract insights button | P1 | ⬜ | P11-011, P11-012 | "Generate Insights" button in SessionDetail |
+| P11-012 | Insights UI (view/edit) | P1 | ✅ | P11-011 | SessionInsights component + SessionDetail integration |
+| P11-013 | Auto-extract insights button | P1 | ✅ | P11-011, P11-012 | "Generate Insights" button in SessionDetail |
 
-### MCP & Settings
+### MCP & Automation
 
 | ID | Task | Priority | Status | Dependencies | Notes |
 |----|------|----------|--------|--------------|-------|
 | P11-009 | get_streak MCP tool | P2 | ⬜ | P11-001 | Ask Claude for streak |
 | P11-010 | Budget settings UI | P2 | ⬜ | P11-002 | Configure budget limit |
 | P11-011 | AI Session Insights (MCP) | P1 | ✅ | None | get_session_content + save_session_insights |
+| P11-014 | /extract-insights command | P1 | ✅ | P11-011 | Slash command for easy insight extraction |
+| P11-015 | Auto-extract on Stop hook | P2 | ✅ | P11-011, P11-014 | Optional auto-generation on session end |
 
 ---
 
@@ -336,17 +354,17 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | Phase 8: Quality & Testing | 🚧 In Progress | 2/3 (67%) |
 | Phase 9: Advanced Features | ⬜ Backlog | 0/5 (0%) |
 | Phase 10: Full-Text Search | ✅ Complete | 7/7 (100%) |
-| Phase 11: Productivity Insights | 🚧 In Progress | 3/13 (23%) |
+| Phase 11: Productivity Insights | 🚧 In Progress | 7/15 (47%) |
 
 ### By Priority
 
 | Priority | Total | Completed | In Progress | Todo |
 |----------|-------|-----------|-------------|------|
 | P0 (Critical) | 18 | 12 | 0 | 6 |
-| P1 (High) | 24 | 21 | 0 | 3 |
-| P2 (Medium) | 13 | 1 | 0 | 12 |
+| P1 (High) | 25 | 22 | 0 | 3 |
+| P2 (Medium) | 14 | 2 | 0 | 12 |
 | P3 (Low) | 4 | 0 | 0 | 4 |
-| **Total** | **61** | **34** | **0** | **27** |
+| **Total** | **63** | **36** | **0** | **27** |
 
 ---
 

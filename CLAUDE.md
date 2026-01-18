@@ -21,6 +21,9 @@ Development status. Package structure, file-by-file status, API endpoints, MCP t
 ### docs/TASKS.md
 Task management. Complete task list organized by phase with priority, status, dependencies, progress summary, and next immediate actions.
 
+### docs/DEVELOPMENT_GUIDELINES.md
+Development guidelines and best practices. React Query cache invalidation rules, testing guidelines, common pitfalls to avoid.
+
 ---
 
 Update as needed:

@@ -3,8 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 
-import { health, sessions, messages, stats, sync, search, setupGlobalMiddleware, setupApiMiddleware } from './routes';
-import { insights } from './routes/insights';
+import { health, sessions, messages, stats, sync, search, insights, setupGlobalMiddleware, setupApiMiddleware } from './routes';
 import { resetIdleTimer, getIdleTimeMs } from './utils/timeout';
 import { writePidFile, isServerRunning } from './utils/pid';
 import { DATA_DIR, DB_PATH } from './db';

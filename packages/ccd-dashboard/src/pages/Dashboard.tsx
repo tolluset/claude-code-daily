@@ -1,7 +1,7 @@
 import { useTodayStats } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { formatNumber, formatDate } from '@/lib/utils';
-import { MessageSquare, Zap, Star, Activity } from 'lucide-react';
+import { MessageSquare, Zap, Star, Activity, DollarSign } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { StreakBadge } from '@/components/ui/StreakBadge';
 
@@ -31,6 +31,7 @@ export function Dashboard() {
   const today = formatDate(new Date().toISOString());
   const bookmarkedCount = sessions.filter(s => s.is_bookmarked).length;
   const totalTokens = stats.total_input_tokens + stats.total_output_tokens;
+  const totalCost = (stats.total_input_cost || 0) + (stats.total_output_cost || 0);
 
   return (
     <div className="space-y-6">
@@ -43,7 +44,7 @@ export function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Sessions</CardTitle>
@@ -87,6 +88,19 @@ export function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{bookmarkedCount}</div>
             <p className="text-xs text-muted-foreground">Bookmarked sessions</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cost</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${totalCost.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              In ${(stats.total_input_cost || 0).toFixed(3)} / Out ${(stats.total_output_cost || 0).toFixed(3)}
+            </p>
           </CardContent>
         </Card>
       </div>

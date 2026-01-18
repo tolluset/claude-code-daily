@@ -2,6 +2,7 @@ import { db } from './index';
 import { randomUUID } from 'node:crypto';
 import { QueryBuilder } from './query-builder';
 import { withTransaction } from './transaction';
+import { CostService } from '../services/cost-service';
 import type {
   Session,
   Message,
@@ -119,14 +120,28 @@ export function updateSessionSummary(id: string, summary: string): Session | nul
 
 // Message queries
 export function createMessage(data: CreateMessageRequest): Message {
+  // Calculate costs
+  const cost = CostService.calculateCost(
+    data.input_tokens || 0,
+    data.output_tokens || 0,
+    data.model || null
+  );
+
   const stmt = db.prepare(`
-    INSERT INTO messages (session_id, uuid, type, content, model, input_tokens, output_tokens, timestamp)
-    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+    INSERT INTO messages (
+      session_id, uuid, type, content, model,
+      input_tokens, output_tokens,
+      input_cost, output_cost, is_estimated_cost,
+      timestamp
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
     ON CONFLICT(uuid) DO UPDATE SET
       content = excluded.content,
       model = excluded.model,
       input_tokens = excluded.input_tokens,
-      output_tokens = excluded.output_tokens
+      output_tokens = excluded.output_tokens,
+      input_cost = excluded.input_cost,
+      output_cost = excluded.output_cost
     RETURNING *
   `);
 
@@ -137,11 +152,20 @@ export function createMessage(data: CreateMessageRequest): Message {
     data.content || null,
     data.model || null,
     data.input_tokens || null,
-    data.output_tokens || null
+    data.output_tokens || null,
+    cost.inputCost,
+    cost.outputCost,
+    false  // is_estimated_cost
   ) as Message;
 
-  // Update daily stats
-  updateDailyStats(data.input_tokens || 0, data.output_tokens || 0, true);
+  // Update daily stats with costs
+  updateDailyStats(
+    data.input_tokens || 0,
+    data.output_tokens || 0,
+    cost.inputCost,
+    cost.outputCost,
+    true
+  );
 
   return result;
 }
@@ -188,14 +212,20 @@ export function getTodayStats(): DailyStats {
 export function updateDailyStats(
   inputTokens: number,
   outputTokens: number,
+  inputCost: number,
+  outputCost: number,
   incrementMessage: boolean
 ): void {
   const today = getLocalDateString();
 
   // Use prepared statement to prevent SQL injection
   const insertStmt = db.prepare(`
-    INSERT INTO daily_stats (date, session_count, message_count, total_input_tokens, total_output_tokens)
-    VALUES (?, 0, 0, 0, 0)
+    INSERT INTO daily_stats (
+      date, session_count, message_count,
+      total_input_tokens, total_output_tokens,
+      total_input_cost, total_output_cost
+    )
+    VALUES (?, 0, 0, 0, 0, 0, 0)
     ON CONFLICT(date) DO NOTHING
   `);
   insertStmt.run(today);
@@ -204,10 +234,19 @@ export function updateDailyStats(
     UPDATE daily_stats SET
       message_count = message_count + ?,
       total_input_tokens = total_input_tokens + ?,
-      total_output_tokens = total_output_tokens + ?
+      total_output_tokens = total_output_tokens + ?,
+      total_input_cost = total_input_cost + ?,
+      total_output_cost = total_output_cost + ?
     WHERE date = ?
   `);
-  updateStmt.run(incrementMessage ? 1 : 0, inputTokens, outputTokens, today);
+  updateStmt.run(
+    incrementMessage ? 1 : 0,
+    inputTokens,
+    outputTokens,
+    inputCost,
+    outputCost,
+    today
+  );
 }
 
 export function incrementSessionCount(): void {

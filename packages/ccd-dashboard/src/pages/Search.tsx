@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, Calendar, Clock, FileText, Star, X } from 'lucide-react';
 import { useSearchResults } from '../lib/api';
 import { Card } from '../components/ui/Card';
+import { MessageContent } from '../components/MessageContent';
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -11,8 +12,7 @@ export function SearchPage() {
   const [project, setProject] = useState(searchParams.get('project') || '');
   const [bookmarkedOnly, setBookmarkedOnly] = useState(searchParams.get('bookmarked') === 'true');
 
-  // Debug logging
-  console.log('SearchPage - query:', query, 'searchParams:', Object.fromEntries(searchParams.entries()));
+
 
   useEffect(() => {
     const currentQuery = searchParams.get('q') || '';
@@ -29,20 +29,9 @@ export function SearchPage() {
     bookmarkedOnly,
     20
   );
-    console.info("🚀 : Search.tsx:24: results=", results)
-
-  console.log('Results details:', { results, resultsType: typeof results, resultsLength: results?.length });
-
-  // Debug: Check if results are properly received
-  useEffect(() => {
-    console.log('useEffect debug:', { query, results, isLoading, error });
-  }, [query, results, isLoading, error]);
 
   // Use real API data
   const displayResults = results || [];
-
-  console.log('Search debug:', { query, results, isLoading, error, project, bookmarkedOnly });
-  console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +40,7 @@ export function SearchPage() {
       params.set('q', searchInput.trim());
       if (project) params.set('project', project);
       if (bookmarkedOnly) params.set('bookmarked', 'true');
-      setSearchParams(params);
+      setSearchParams(params, { replace: true });
     }
   };
 
@@ -62,11 +51,11 @@ export function SearchPage() {
     } else {
       params.delete(key);
     }
-    setSearchParams(params);
+    setSearchParams(params, { replace: true });
   };
 
   const handleClear = () => {
-    setSearchParams({});
+    setSearchParams({}, { replace: true });
   };
 
   const getTypeIcon = (type: string) => {
@@ -137,7 +126,17 @@ export function SearchPage() {
          </div>
        )}
 
-      {query && !isLoading && Array.isArray(displayResults) && displayResults.length > 0 && (
+      {query && !isLoading && displayResults.length === 0 && (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <Search className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-lg text-gray-600">No results found for "{query}"</p>
+            <p className="text-sm mt-2 text-gray-500">Try different keywords or adjust your filters</p>
+          </div>
+        </div>
+      )}
+
+      {query && !isLoading && displayResults.length > 0 && (
         <div>
           <div className="mb-4 flex items-center justify-between">
             <div className="text-sm text-gray-600">
@@ -182,9 +181,10 @@ export function SearchPage() {
                       </span>
                     </div>
 
-                     <div className="text-gray-900 mb-3 leading-relaxed">
-                       {result.snippet || result.content}
-                     </div>
+                     <MessageContent
+                       content={result.snippet || result.content}
+                       className="text-gray-900 mb-3"
+                     />
 
                      <a
                        href={`/sessions/${result.session_id}`}

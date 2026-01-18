@@ -134,6 +134,82 @@ const migrations: Migration[] = [
     down: `
       ALTER TABLE sessions DROP COLUMN source;
     `
+  },
+  {
+    name: '006_add_cost_tracking',
+    up: `
+      -- Model pricing table for cost calculation
+      CREATE TABLE IF NOT EXISTS model_pricing (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        model_family TEXT NOT NULL UNIQUE,
+        input_cost_per_mtok REAL NOT NULL,
+        output_cost_per_mtok REAL NOT NULL,
+        effective_date TEXT NOT NULL,
+        notes TEXT
+      );
+
+      -- Current Claude pricing (2026-01 baseline)
+      INSERT INTO model_pricing (model_family, input_cost_per_mtok, output_cost_per_mtok, effective_date, notes) VALUES
+        ('opus-4-5', 15.00, 75.00, '2026-01-01', 'Claude Opus 4.5'),
+        ('sonnet-4-5', 3.00, 15.00, '2026-01-01', 'Claude Sonnet 4.5'),
+        ('haiku-3-5', 0.80, 4.00, '2026-01-01', 'Claude Haiku 3.5');
+
+      -- Add cost columns to messages table
+      ALTER TABLE messages ADD COLUMN input_cost REAL;
+      ALTER TABLE messages ADD COLUMN output_cost REAL;
+      ALTER TABLE messages ADD COLUMN is_estimated_cost BOOLEAN DEFAULT FALSE;
+
+      -- Add cost columns to daily_stats table
+      ALTER TABLE daily_stats ADD COLUMN total_input_cost REAL DEFAULT 0;
+      ALTER TABLE daily_stats ADD COLUMN total_output_cost REAL DEFAULT 0;
+
+      -- Index for pricing lookups
+      CREATE INDEX IF NOT EXISTS idx_pricing_family ON model_pricing(model_family);
+
+      -- Backfill existing message costs
+      UPDATE messages
+      SET
+        input_cost = COALESCE(
+          (SELECT (messages.input_tokens / 1000000.0) * mp.input_cost_per_mtok
+           FROM model_pricing mp
+           WHERE messages.model LIKE '%' || mp.model_family || '%'
+           LIMIT 1),
+          0
+        ),
+        output_cost = COALESCE(
+          (SELECT (messages.output_tokens / 1000000.0) * mp.output_cost_per_mtok
+           FROM model_pricing mp
+           WHERE messages.model LIKE '%' || mp.model_family || '%'
+           LIMIT 1),
+          0
+        ),
+        is_estimated_cost = TRUE
+      WHERE input_tokens IS NOT NULL OR output_tokens IS NOT NULL;
+
+      -- Backfill daily_stats costs
+      UPDATE daily_stats
+      SET
+        total_input_cost = (
+          SELECT COALESCE(SUM(m.input_cost), 0)
+          FROM messages m
+          JOIN sessions s ON m.session_id = s.id
+          WHERE date(s.started_at) = daily_stats.date
+        ),
+        total_output_cost = (
+          SELECT COALESCE(SUM(m.output_cost), 0)
+          FROM messages m
+          JOIN sessions s ON m.session_id = s.id
+          WHERE date(s.started_at) = daily_stats.date
+        );
+    `,
+    down: `
+      ALTER TABLE messages DROP COLUMN input_cost;
+      ALTER TABLE messages DROP COLUMN output_cost;
+      ALTER TABLE messages DROP COLUMN is_estimated_cost;
+      ALTER TABLE daily_stats DROP COLUMN total_input_cost;
+      ALTER TABLE daily_stats DROP COLUMN total_output_cost;
+      DROP TABLE IF EXISTS model_pricing;
+    `
   }
 ];
 

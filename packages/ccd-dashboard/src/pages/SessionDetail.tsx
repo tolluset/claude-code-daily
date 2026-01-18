@@ -3,10 +3,12 @@ import { useSession, useSessionMessages, toggleBookmark, deleteSession, useSessi
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
 import { SessionInsights } from '@/components/ui/SessionInsights';
+import { MessageContent } from '@/components/MessageContent';
 import { formatDateTime, formatNumber } from '@/lib/utils';
 import { Star, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder, HelpCircle, Trash2, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export function SessionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +41,10 @@ export function SessionDetail() {
 
   const handleBookmark = async () => {
     await toggleBookmark(session.id);
+    // Invalidate all related queries to ensure UI updates across all pages
     queryClient.invalidateQueries({ queryKey: ['session', id] });
+    queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['search'] }); // All search results
   };
 
   const handleCopyId = () => {
@@ -62,23 +67,32 @@ export function SessionDetail() {
   const handleGenerateInsights = async () => {
     setIsGenerating(true);
     try {
-      // Copy the session ID and show instructions
-      await navigator.clipboard.writeText(session.id);
-      alert(
-        `Session ID copied to clipboard!\n\n` +
-        `To generate insights:\n` +
-        `1. Open Claude Code\n` +
-        `2. Ask: "Analyze session ${session.id} and extract insights"\n` +
-        `3. Claude will use MCP tools to analyze and save insights\n` +
-        `4. Refresh this page to see the results`
-      );
+      // Copy the full claude command to clipboard
+      const claudeCommand = `claude --resume ${session.id} -p "Analyze session ${session.id} and extract insights"`;
+      await navigator.clipboard.writeText(claudeCommand);
+
+      toast.success('Command copied to clipboard!', {
+        description: (
+          <div className="space-y-2 text-sm">
+            <div className="font-mono text-xs bg-black/10 dark:bg-white/10 p-2 rounded break-all">
+              {claudeCommand}
+            </div>
+            <div className="text-xs">
+              Paste this command in your terminal to generate insights
+            </div>
+          </div>
+        ),
+        duration: 6000,
+      });
     } catch (error) {
-      console.error('Failed to copy session ID:', error);
-      alert('Failed to copy session ID');
+      console.error('Failed to copy command:', error);
+      toast.error('Failed to copy command', {
+        description: 'Please try again',
+      });
     } finally {
       setIsGenerating(false);
     }
-  };
+  }
 
   const handleUpdateNotes = async (notes: string) => {
     await updateInsightNotes(session.id, notes);
@@ -107,11 +121,10 @@ export function SessionDetail() {
             <h1 className="text-2xl font-bold">
               {session.project_name || '(unknown)'}
             </h1>
-            <span className={`px-2 py-0.5 text-xs rounded-full ${
-              isActive
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : 'bg-muted text-muted-foreground'
-            }`}>
+            <span className={`px-2 py-0.5 text-xs rounded-full ${isActive
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              : 'bg-muted text-muted-foreground'
+              }`}>
               {isActive ? 'Active' : 'Ended'}
             </span>
           </div>
@@ -124,11 +137,10 @@ export function SessionDetail() {
           title="Toggle bookmark"
         >
           <Star
-            className={`h-6 w-6 ${
-              session.is_bookmarked
-                ? 'text-yellow-500 fill-yellow-500'
-                : 'text-muted-foreground'
-            }`}
+            className={`h-6 w-6 ${session.is_bookmarked
+              ? 'text-yellow-500 fill-yellow-500'
+              : 'text-muted-foreground'
+              }`}
           />
         </IconButton>
         <IconButton
@@ -263,11 +275,10 @@ export function SessionDetail() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-4 p-4 rounded-lg ${
-                    message.type === 'user'
-                      ? 'bg-primary/5'
-                      : 'bg-muted'
-                  }`}
+                  className={`flex gap-4 p-4 rounded-lg ${message.type === 'user'
+                    ? 'bg-primary/5'
+                    : 'bg-muted'
+                    }`}
                 >
                   <div className="flex-shrink-0">
                     {message.type === 'user' ? (
@@ -296,9 +307,10 @@ export function SessionDetail() {
                         </span>
                       )}
                     </div>
-                    <div className="text-sm whitespace-pre-wrap break-words">
-                      {message.content || '(no content)'}
-                    </div>
+                    <MessageContent
+                      content={message.content || '(no content)'}
+                      className="text-sm"
+                    />
                   </div>
                 </div>
               ))}

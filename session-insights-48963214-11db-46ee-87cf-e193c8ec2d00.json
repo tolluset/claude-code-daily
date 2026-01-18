@@ -1,0 +1,34 @@
+{
+  "session_id": "48963214-11db-46ee-87cf-e193c8ec2d00",
+  "summary": "React Query cache invalidation bug fixed: bookmark state not updating in list view after toggling on detail page. Created comprehensive development guidelines document to prevent similar issues.",
+  "key_learnings": [
+    "Prefix-based cache invalidation: queryClient.invalidateQueries({ queryKey: ['search'] }) invalidates all queries starting with ['search', ...]",
+    "Must invalidate ALL related query keys when data appears in multiple UI locations (detail page, list page, search results)",
+    "Development guidelines documentation prevents recurring bugs by establishing consistent patterns",
+    "React Query cache synchronization requires understanding data flow across entire application"
+  ],
+  "problems_solved": [
+    "Bookmark state not syncing between SessionDetail and Sessions list pages",
+    "Missing cache invalidation for search queries when bookmark toggled",
+    "Lack of developer documentation for React Query best practices"
+  ],
+  "code_patterns": [
+    "queryClient.invalidateQueries({ queryKey: ['session', id] })",
+    "queryClient.invalidateQueries({ queryKey: ['sessions'] })",
+    "queryClient.invalidateQueries({ queryKey: ['search'] })",
+    "Comprehensive mutation → invalidation pattern for data consistency"
+  ],
+  "technologies": [
+    "React Query (TanStack Query)",
+    "TypeScript",
+    "React"
+  ],
+  "difficulty": "medium",
+  "analysis_date": "2026-01-19T05:30:00+09:00",
+  "notes": [
+    "This session demonstrates effective bug fixing with preventive documentation",
+    "Created DEVELOPMENT_GUIDELINES.md with comprehensive React Query patterns",
+    "Updated SessionDetail.tsx and Sessions.tsx for cache consistency",
+    "Total files modified: 4 (2 code files, 2 documentation files)"
+  ]
+}

@@ -54,7 +54,9 @@ export function Sessions() {
     e.preventDefault();
     e.stopPropagation();
     await toggleBookmark(session.id);
+    // Invalidate all related queries to ensure UI updates across all pages
     queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['search'] }); // All search results
   };
 
   const handleCopyId = (id: string, e: React.MouseEvent) => {

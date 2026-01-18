@@ -30,8 +30,16 @@ A powerful, privacy-first dashboard that automatically captures all your Claude 
 - **Test Coverage** - All critical paths validated
 - **Reliable Operation** - Automated empty session cleanup
 
+### 🧠 AI Session Insights (Phase 11 - New!)
+- **Smart Analysis** - Claude analyzes your sessions to extract meaningful insights
+- **Structured Extraction** - Summary, key learnings, problems solved, code patterns, technologies
+- **Easy Access** - Use `/extract-insights` command or enable auto-extraction
+- **Editable Notes** - Add your own notes to AI-generated insights
+- **Zero Config** - Uses Claude Code's built-in AI, no API keys needed
+
 ### 🔧 Core Features
 - **Auto Session Tracking** - Automatic capture via Claude Code hooks
+- **Coding Streak Tracker** - Track your daily coding habits with fire emoji 🔥
 - **Bookmark System** - Mark and annotate important sessions
 - **Token Tracking** - Monitor input/output tokens per message
 - **MCP Integration** - Control via natural language (open dashboard, search, stats)
@@ -97,7 +105,14 @@ With MCP configured, ask Claude directly:
 # Inside Claude Code
 /bookmark              # Toggle bookmark on current session
 /bookmark "fix: auth"  # Bookmark with a note
+/extract-insights      # Extract AI insights from current session
 ```
+
+**New: AI Session Insights** 🧠
+- Use `/extract-insights` to automatically analyze the current session
+- Extracts: Summary, key learnings, problems solved, code patterns, technologies
+- View insights on the Session Detail page
+- Optional: Enable auto-extraction on session end (see Configuration below)
 
 ### API Endpoints
 
@@ -212,6 +227,35 @@ ccd/
 - AI-powered usage insights
 - Peak coding hour analysis
 - Advanced search operators (AND, OR, NOT)
+
+## ⚙️ Configuration
+
+CCD supports optional configuration via `~/.ccd/config.json`:
+
+```json
+{
+  "auto_extract_insights": false
+}
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `auto_extract_insights` | boolean | `false` | Automatically extract AI insights when a session ends. Requires `claude` CLI to be available. |
+
+**To enable auto-extraction**:
+
+1. Create `~/.ccd/config.json`:
+   ```bash
+   echo '{"auto_extract_insights": true}' > ~/.ccd/config.json
+   ```
+
+2. Insights will be automatically generated in the background when you end a Claude Code session
+
+3. View extracted insights on the Session Detail page
+
+**Note**: Auto-extraction runs asynchronously and does not block session shutdown.
 
 ## 📚 Documentation
 

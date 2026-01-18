@@ -145,6 +145,12 @@ ccd/
 ## Development Log
 
 ### 2026-01-19
+- ✅ **Phase 11: Insights Automation (P11-014, P11-015)** - Complete automation workflow
+  - Command: /extract-insights slash command for manual extraction
+  - Auto-extract: Optional background extraction on session end via Stop hook
+  - Config: ~/.ccd/config.json for auto_extract_insights option
+  - Non-blocking: Async execution with 30s timeout
+  - Logging: Dedicated auto-extract.log for debugging
 - ✅ **Phase 11: AI Session Insights (MCP)** - Automated insight extraction
   - Database: session_insights table with FTS5 integration (005_add_insights)
   - Backend: CRUD functions for insights management (getSessionInsight, createOrUpdateInsight, etc.)

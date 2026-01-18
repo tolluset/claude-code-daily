@@ -41,6 +41,14 @@ HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 
 echo "[$(date)] API Response: HTTP $HTTP_CODE - $BODY" >> "$LOG_FILE"
+
+# Auto-extract insights (async, non-blocking)
+if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+    SCRIPT_DIR="$(dirname "$0")"
+    echo "[$(date)] Triggering auto-extract insights in background" >> "$LOG_FILE"
+    bash "$SCRIPT_DIR/auto-extract-insights.sh" "$SESSION_ID" &
+fi
+
 echo "[$(date)] ========== Stop hook completed ==========" >> "$LOG_FILE"
 
 exit 0

@@ -1,0 +1,11 @@
+{
+  "auto_extract_insights": false,
+  "description": "Configuration for CCD plugin auto-features",
+  "options": {
+    "auto_extract_insights": {
+      "type": "boolean",
+      "default": false,
+      "description": "Automatically extract AI insights when a session ends. Requires 'claude' CLI to be available."
+    }
+  }
+}

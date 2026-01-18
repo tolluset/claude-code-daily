@@ -5,6 +5,7 @@ export { messages } from './messages';
 export { stats } from './stats';
 export { sync } from './sync';
 export { search } from './search';
+export { insights } from './insights';
 
 // Middleware exports
 export * from './middleware';
