@@ -1,50 +1,45 @@
 # Claude Code Daily (CCD)
 
-A dashboard for tracking and visualizing your daily Claude Code usage data.
+> **v0.1.0** - A comprehensive dashboard for tracking and analyzing your Claude Code usage with advanced statistics, filtering, and full-text search.
 
-## Why CCD?
+A powerful, privacy-first dashboard that automatically captures all your Claude Code sessions, providing deep insights into your AI-assisted development workflow.
 
-When using Claude Code daily, you might wonder:
+## ✨ Key Features
 
-- **"How much am I actually using Claude Code?"** - Track sessions, messages, and token usage
-- **"What did I work on last week?"** - Review your coding history and patterns
-- **"Where did that useful session go?"** - Bookmark important sessions for quick access
-- **"Am I using AI efficiently?"** - Analyze your usage trends over time
+### 📊 Enhanced Statistics (Phase 5)
+- **Daily Stats API** - Track sessions, messages, and tokens with date range support
+- **Interactive Charts** - Visualize trends with Recharts:
+  - Token Usage Trend (line chart)
+  - Sessions per Day (bar chart)
+  - Project Distribution (pie chart)
+- **Reports Page** - Comprehensive analytics with customizable date ranges
 
-CCD automatically captures all your Claude Code sessions in the background, providing insights into your AI-assisted development workflow.
+### 🔍 Full-Text Search (Phase 10)
+- **FTS5-Powered Search** - Lightning-fast search across all sessions and messages
+- **BM25 Ranking** - Relevance-based result ordering
+- **Advanced Filters** - Date range, project, and bookmarked status
+- **Highlighted Results** - See matching text snippets in context
 
-## Features
+### 🎯 Smart Filtering (Phase 6)
+- **Project Filter** - Focus on specific projects across all pages
+- **Date Range** - Analyze any time period
+- **Bookmark Filter** - Quickly find important sessions
 
-- **Auto Session Tracking** - Automatically saves sessions and messages via Claude Code plugin
-- **Bookmark System** - Mark important sessions with notes for quick reference
-- **Token Usage Tracking** - Monitor input/output tokens per message
-- **Web Dashboard** - React-based visualization dashboard
-- **MCP Integration** - Ask Claude directly to open dashboard or show stats
+### ✅ Quality Assurance (Phase 8)
+- **29 Test Suite** - Comprehensive unit and integration tests
+- **Test Coverage** - All critical paths validated
+- **Reliable Operation** - Automated empty session cleanup
 
-## Architecture
+### 🔧 Core Features
+- **Auto Session Tracking** - Automatic capture via Claude Code hooks
+- **Bookmark System** - Mark and annotate important sessions
+- **Token Tracking** - Monitor input/output tokens per message
+- **MCP Integration** - Control via natural language (open dashboard, search, stats)
+- **Privacy-First** - All data stored locally in SQLite (`~/.ccd/ccd.db`)
 
-```
-┌─────────────────┐     ┌─────────────────┐
-│  CCD Plugin     │────▶│  CCD Server     │
-│  (Hooks + MCP)  │     │  (SQLite + API + Dashboard)
-└─────────────────┘     └────────┬────────┘
-                                   │
-          ┌────────────────────────┼────────────────────────┐
-          ▼                        ▼                        ▼
-  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-  │  MCP Tools      │     │  HTTP API       │     │  Web Dashboard  │
-  │  (LLM Access)   │     │  (Sessions,    │     │  (React UI)     │
-  │                 │     │   Messages,     │     │                 │
-  │  • open_dashboard│     │   Stats)       │     │  • Stats cards  │
-  │  • get_stats    │     │                 │     │  • Sessions     │
-  └─────────────────┘     └─────────────────┘     └─────────────────┘
-```
+## 🚀 Quick Start
 
----
-
-## Installation
-
-### Quick Start (Recommended)
+### Installation (Recommended)
 
 ```bash
 # Inside Claude Code
@@ -52,179 +47,195 @@ CCD automatically captures all your Claude Code sessions in the background, prov
 /plugin install ccd@claude-code-daily
 ```
 
-That's it! The plugin will:
-- Automatically start the server when you begin a Claude Code session
-- Track all your sessions and messages
-- Configure MCP tools for easy access
-
-### Manual Installation
-
-If you need to install the server manually:
-
-```bash
-npm install -g ccd-server
-```
-
-The server will be auto-started by the plugin when needed.
+The plugin automatically:
+- Starts the server when you begin a session
+- Tracks all sessions and messages
+- Configures MCP tools for easy access
+- Auto-shutdowns after 1 hour of inactivity
 
 ### From Source (Development)
 
 ```bash
-# Clone repository
+# Clone and install
 git clone https://github.com/tolluset/claude-code-daily.git
 cd claude-code-daily
-
-# Install dependencies
 pnpm install
-
-# Build all packages
 pnpm build
 
-# Run Claude Code with plugin
+# Run with plugin
 claude --plugin-dir ./packages/ccd-plugin
 ```
 
-### Plugin Configuration (Development)
-
-The plugin will be auto-detected by Claude Code when using `--plugin-dir`.
-
-For permanent installation, add to `~/.claude/settings.json`:
-
-```json
-{
-  "pluginDirectories": [
-    "/path/to/claude-code-daily/packages/ccd-plugin"
-  ]
-}
-```
-
----
-
-## Usage
-
-### Auto Tracking
-
-Once the plugin is loaded, CCD automatically:
-- Starts the server when a Claude Code session begins
-- Registers each session with project info and git branch
-- Saves user prompts in real-time
-- Parses transcript and saves assistant responses on session stop
-- Auto-shutdowns the server after 1 hour of inactivity
-
-### Bookmark Command
-
-```bash
-# Inside Claude Code session
-/bookmark              # Toggle bookmark on current session
-/bookmark "note"       # Bookmark with a note
-```
-
-### MCP Tools (Ask Claude)
-
-When the MCP server is configured, you can ask Claude directly:
-
-| Request | MCP Tool |
-|---------|----------|
-| "Open the dashboard" | `open_dashboard` - Opens dashboard in browser |
-| "Show my stats" | `get_stats` - Returns session statistics |
-| "What did I do this week?" | `get_stats(period: "week")` - Weekly summary |
+## 📖 Usage
 
 ### Web Dashboard
 
-Open http://localhost:3847 in your browser (or ask Claude to "open dashboard") to view:
-- Today's stats summary
-- Session list with bookmark filter
-- Session details with conversation history
+Open http://localhost:3847 to access:
 
----
+| Page | Description |
+|------|-------------|
+| **Dashboard** | Today's stats summary + recent sessions |
+| **Sessions** | Full session list with project/date filters |
+| **Reports** | Analytics with 3 interactive charts |
+| **Search** | Full-text search across all content |
+| **Session Detail** | Complete conversation history with token breakdown |
 
-## Development
+### MCP Tools (Ask Claude)
 
-### Running Locally
+With MCP configured, ask Claude directly:
+
+| Request | Tool | Description |
+|---------|------|-------------|
+| "Open the dashboard" | `open_dashboard` | Opens dashboard in browser |
+| "Show my stats" | `get_stats` | Returns session statistics |
+| "What did I do this week?" | `get_stats(period: "week")` | Weekly summary |
+| "Search for API authentication" | `search_sessions` | Full-text search with filters |
+
+### Slash Commands
 
 ```bash
-# Server (Port 3847 - includes Dashboard)
-cd packages/ccd-server && bun run src/index.ts
-
-# MCP Server (for development/testing)
-cd packages/ccd-mcp && bun run src/index.ts
-
-# Dashboard dev mode (Vite with HMR)
-cd packages/ccd-dashboard && pnpm dev
+# Inside Claude Code
+/bookmark              # Toggle bookmark on current session
+/bookmark "fix: auth"  # Bookmark with a note
 ```
 
-### Packaging Server for npm
+### API Endpoints
 
-```bash
-# Build dashboard for production
-cd packages/ccd-dashboard && pnpm build
+The server exposes a RESTful API at `http://localhost:3847/api/v1`:
 
-# Build server and package for npm
-cd packages/ccd-server
-pnpm build
-npm pack
+**Sessions**
+- `GET /sessions` - List sessions (supports `?from=`, `?to=`, `?project=`)
+- `GET /sessions/:id` - Session details
+- `POST /sessions/:id/bookmark` - Toggle bookmark
+- `DELETE /sessions/:id` - Delete session
+
+**Statistics**
+- `GET /stats/today` - Today's stats
+- `GET /stats/daily` - Daily stats with date range
+
+**Search**
+- `GET /search` - Full-text search (supports `?q=`, `?project=`, `?bookmarked=`)
+
+**Health**
+- `GET /health` - Server status
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐
+│  CCD Plugin     │────▶│  CCD Server     │
+│  (Hooks + MCP)  │     │  (SQLite + API) │
+└─────────────────┘     └────────┬────────┘
+                                  │
+         ┌────────────────────────┼────────────────────────┐
+         ▼                        ▼                        ▼
+ ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+ │  MCP Tools      │     │  Web Dashboard  │     │  External Apps  │
+ │  • open_dashboard│     │  • React + Vite │     │  • API Clients  │
+ │  • get_stats    │     │  • Recharts     │     │  • CLI Tools    │
+ │  • search_sessions│    │  • TanStack Query│    │                 │
+ └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
-### MCP Configuration
+### Database Schema
 
-The plugin includes `.mcp.json` for auto-configuration. When installed, MCP tools are automatically available.
+**Tables**:
+- `sessions` - Session metadata (project, branch, bookmarks, summary)
+- `messages` - Individual messages with token counts
+- `daily_stats` - Aggregated daily statistics
+- `messages_fts` - FTS5 virtual table for message search
+- `sessions_fts` - FTS5 virtual table for session search
 
-### Project Structure
+**Storage**: `~/.ccd/ccd.db` (SQLite, local-only)
+
+## 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Monorepo | pnpm workspaces + Turborepo |
+| Server Runtime | Bun (dev) / Node.js (prod) |
+| Server Framework | Hono |
+| Database | SQLite with FTS5 (full-text search) |
+| Plugin | Bash scripts + Claude Code Hooks |
+| MCP | @modelcontextprotocol/sdk + Zod |
+| Dashboard | React + Vite + TailwindCSS |
+| State Management | TanStack Query |
+| Charts | Recharts |
+| Testing | Bun Test (29 tests) |
+
+## 📂 Project Structure
 
 ```
 ccd/
 ├── packages/
 │   ├── ccd-server/      # Backend server (Bun + Hono + SQLite)
+│   │   ├── src/routes/  # API endpoints
+│   │   ├── src/db/      # Database queries + migrations
+│   │   └── __tests__/   # Unit & integration tests
 │   ├── ccd-dashboard/   # Web dashboard (React + Vite)
+│   │   ├── src/pages/   # Dashboard, Sessions, Reports, Search
+│   │   └── src/components/  # Charts, UI components
 │   ├── ccd-mcp/         # MCP server for LLM tools
-│   └── ccd-plugin/      # Claude Code plugin (Hooks + MCP)
+│   └── ccd-plugin/      # Claude Code plugin
+│       ├── hooks/       # SessionStart, UserPromptSubmit, Stop
+│       └── commands/    # /bookmark command
 └── shared/
     └── types/           # Shared TypeScript types
 ```
 
----
+## 📊 Current Status
 
-## Data Storage
+| Phase | Status | Progress |
+|-------|--------|----------|
+| Phase 1: Infrastructure | ✅ Complete | 6/6 (100%) |
+| Phase 2: Plugin Development | ✅ Complete | 6/6 (100%) |
+| Phase 3: MCP Development | ✅ Complete | 6/6 (100%) |
+| Phase 4: Dashboard (MVP) | ✅ Complete | 6/6 (100%) |
+| **Phase 5: Enhanced Statistics** | ✅ Complete | 10/10 (100%) |
+| **Phase 6: Enhanced Filtering** | ✅ Complete | 3/3 (100%) |
+| Phase 7: Infrastructure | 🚧 In Progress | 2/4 (50%) |
+| **Phase 8: Quality & Testing** | 🚧 In Progress | 2/3 (67%) |
+| Phase 9: Advanced Features | ⬜ Backlog | 0/5 (0%) |
+| **Phase 10: Full-Text Search** | ✅ Complete | 7/7 (100%) |
 
-All data is stored locally at `~/.ccd/ccd.db` (SQLite).
+**Overall**: 31/50 tasks completed (62%)
 
-No external servers or cloud services are used - your data stays on your machine.
+## 🔮 Roadmap
 
----
+### Next Steps
+- **Production Build** - Optimize dashboard for deployment
+- **E2E Testing** - Automated hook testing
+- **Data Export** - JSON/CSV export functionality
 
-## Documentation
+### Future Enhancements
+- Multi-device sync via cloud storage
+- AI-powered usage insights
+- Peak coding hour analysis
+- Advanced search operators (AND, OR, NOT)
+
+## 📚 Documentation
 
 | Document | Description |
 |----------|-------------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture and tech stack |
-| [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | API and implementation details |
-| [STATUS.md](docs/STATUS.md) | Development progress |
-| [TASKS.md](docs/TASKS.md) | Task management |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, database schema, design decisions |
+| [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | API endpoints, hook implementation, MCP tools |
+| [TASKS.md](docs/TASKS.md) | Complete task management and progress tracking |
+| [STATUS.md](docs/STATUS.md) | Development status and recent achievements |
+| [SEARCH_IMPLEMENTATION.md](docs/SEARCH_IMPLEMENTATION.md) | Full-text search feature documentation |
 
----
+## 🤝 Contributing
 
-## Tech Stack
+Contributions are welcome! Please check:
+- [TASKS.md](docs/TASKS.md) for open tasks
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design
+- Run `pnpm test` before submitting PRs
 
-| Component | Technology |
-|-----------|------------|
-| Monorepo | pnpm workspaces + Turborepo |
-| Server | Node.js + Hono + better-sqlite3 |
-| Plugin | Bash scripts + Claude Code Hooks |
-| MCP | @modelcontextprotocol/sdk + Zod |
-| Dashboard | React + Vite + TailwindCSS + TanStack Query |
-
----
-
-## Future Features
-
-Phase 2 (In Planning):
-- Daily stats API with date range
-- Reports page with charts
-- Project-based filtering
-- Date range picker
-
----
-
-## License
+## 📄 License
 
 MIT
+
+---
+
+**Made with ❤️ by tolluset**
+
+**Powered by Claude Sonnet 4.5**
