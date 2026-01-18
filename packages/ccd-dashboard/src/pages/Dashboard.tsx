@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { MessageSquare, Zap, Star, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { StreakBadge } from '@/components/ui/StreakBadge';
 
 export function Dashboard() {
   const { data, isLoading, error } = useTodayStats();
@@ -33,9 +34,12 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">{today}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">{today}</p>
+        </div>
+        <StreakBadge />
       </div>
 
       {/* Stats Grid */}

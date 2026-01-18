@@ -70,8 +70,9 @@ ccd/
 | `src/components/ui/TokenTrendChart.tsx` | ✅ | Line chart for token usage trends |
 | `src/components/ui/SessionBarChart.tsx` | ✅ | Bar chart for session counts |
 | `src/components/ui/ProjectPieChart.tsx` | ✅ | Pie chart for project distribution |
+| `src/components/ui/StreakBadge.tsx` | ✅ | Coding streak tracker badge |
 | `src/components/ui/DiffView.tsx` | ✅ | Code diff visualization component |
-| `src/pages/Dashboard.tsx` | ✅ | Main dashboard (stats + recent sessions) |
+| `src/pages/Dashboard.tsx` | ✅ | Main dashboard (stats + streak badge) |
 | `src/pages/Sessions.tsx` | ✅ | Session list with filters (date, project) |
 | `src/pages/SessionDetail.tsx` | ✅ | Session detail with delete button |
 | `src/pages/Reports.tsx` | ✅ | Reports page with charts and filters |
@@ -107,6 +108,7 @@ ccd/
 | GET | /api/v1/sessions/:id/messages | ✅ |
 | GET | /api/v1/stats/today | ✅ |
 | GET | /api/v1/stats/daily | ✅ |
+| GET | /api/v1/stats/streak | ✅ |
 | POST | /api/v1/sync/transcript | ✅ |
 | GET | /api/v1/search | ✅ |
 

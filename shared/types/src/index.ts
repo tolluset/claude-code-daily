@@ -62,6 +62,14 @@ export interface DailyStats {
   total_output_tokens: number;
 }
 
+// Streak stats types
+export interface StreakStats {
+  current_streak: number;
+  longest_streak: number;
+  total_active_days: number;
+  streak_start_date: string | null;
+}
+
 // API response types
 export interface ApiResponse<T> {
   success: boolean;

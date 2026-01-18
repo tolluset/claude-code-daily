@@ -407,3 +407,88 @@ export function searchSessions(options: SearchOptions): SearchResult[] {
     return scoreA - scoreB;
   }).slice(options.offset || 0, (options.offset || 0) + (options.limit || 20));
 }
+
+export function getStreakStats(): {
+  current_streak: number;
+  longest_streak: number;
+  total_active_days: number;
+  streak_start_date: string | null;
+} {
+  // Get all dates with activity, sorted descending
+  const stmt = db.prepare(`
+    SELECT date
+    FROM daily_stats
+    WHERE session_count > 0
+    ORDER BY date DESC
+  `);
+  const activeDates = stmt.all() as { date: string }[];
+
+  if (activeDates.length === 0) {
+    return {
+      current_streak: 0,
+      longest_streak: 0,
+      total_active_days: 0,
+      streak_start_date: null
+    };
+  }
+
+  const today = getLocalDateString();
+  let currentStreak = 0;
+  let longestStreak = 0;
+  let currentStreakCount = 0;
+  let streakStartDate: string | null = null;
+
+  // Calculate current streak (starting from today)
+  for (let i = 0; i < activeDates.length; i++) {
+    const date = activeDates[i].date;
+    const expectedDate = i === 0 ? today : addDays(activeDates[i - 1].date, -1);
+
+    if (date === expectedDate) {
+      currentStreakCount++;
+      if (i === 0) {
+        streakStartDate = date;
+      }
+    } else {
+      break;
+    }
+  }
+
+  currentStreak = currentStreakCount;
+
+  // Calculate longest streak
+  let tempStreak = 1;
+  for (let i = 0; i < activeDates.length - 1; i++) {
+    const currentDate = activeDates[i].date;
+    const nextDate = activeDates[i + 1].date;
+
+    if (daysDifference(currentDate, nextDate) === 1) {
+      tempStreak++;
+      longestStreak = Math.max(longestStreak, tempStreak);
+    } else {
+      tempStreak = 1;
+    }
+  }
+
+  longestStreak = Math.max(longestStreak, tempStreak, currentStreak);
+
+  return {
+    current_streak: currentStreak,
+    longest_streak: longestStreak,
+    total_active_days: activeDates.length,
+    streak_start_date: currentStreak > 0 ? streakStartDate : null
+  };
+}
+
+// Helper function: Add days to a date string (YYYY-MM-DD)
+function addDays(dateString: string, days: number): string {
+  const date = new Date(dateString + 'T00:00:00');
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split('T')[0];
+}
+
+// Helper function: Calculate days between two date strings
+function daysDifference(date1: string, date2: string): number {
+  const d1 = new Date(date1 + 'T00:00:00');
+  const d2 = new Date(date2 + 'T00:00:00');
+  return Math.abs(Math.floor((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24)));
+}

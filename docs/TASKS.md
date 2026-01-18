@@ -272,14 +272,48 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 
 ---
 
+## Phase 11: Productivity Insights ⬜
+
+**Status**: Ready for implementation
+
+**Goal**: Provide actionable insights for productivity and cost optimization
+
+### Database & Backend
+
+| ID | Task | Priority | Status | Dependencies | Notes |
+|----|------|----------|--------|--------------|-------|
+| P11-001 | Coding Streak Tracker | P1 | ✅ | None | getStreakStats() + GET /stats/streak |
+| P11-002 | Cost Tracking & Budget Alerts | P1 | ⬜ | None | Model pricing table + cost calculation |
+| P11-003 | Session Tags system | P2 | ⬜ | None | Manual + auto-detection tags |
+| P11-004 | Token Efficiency Analysis | P2 | ⬜ | None | Identify inefficient sessions |
+
+### Frontend
+
+| ID | Task | Priority | Status | Dependencies | Notes |
+|----|------|----------|--------|--------------|-------|
+| P11-005 | Streak Badge component | P1 | ✅ | P11-001 | StreakBadge on Dashboard header |
+| P11-006 | Cost Dashboard cards | P1 | ⬜ | P11-002 | Daily/monthly cost display |
+| P11-007 | Heatmap Calendar | P2 | ⬜ | None | GitHub-style activity calendar |
+| P11-008 | Tags UI (add/remove/filter) | P2 | ⬜ | P11-003 | Session tagging interface |
+
+### MCP & Settings
+
+| ID | Task | Priority | Status | Dependencies | Notes |
+|----|------|----------|--------|--------------|-------|
+| P11-009 | get_streak MCP tool | P2 | ⬜ | P11-001 | Ask Claude for streak |
+| P11-010 | Budget settings UI | P2 | ⬜ | P11-002 | Configure budget limit |
+
+---
+
 ## Cleanup Tasks ⬜
 
 **Status**: Immediate
 
 | ID | Task | Priority | Status | Dependencies | Notes |
 |----|------|----------|--------|--------------|-------|
-| C-001 | Commit pending changes (v0.1.0) | P0 | ⬜ | None | Prepare release |
-| C-002 | Update README with latest features | P1 | ⬜ | C-001 | Documentation sync |
+| C-001 | Commit pending changes (v0.1.0) | P0 | ✅ | None | v0.1.0 released |
+| C-002 | Update README with latest features | P1 | ✅ | C-001 | Documentation synced |
+| C-003 | Commit FEATURE_IDEAS.md | P1 | ⬜ | None | New feature planning doc |
 
 ---
 
@@ -299,16 +333,17 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | Phase 8: Quality & Testing | 🚧 In Progress | 2/3 (67%) |
 | Phase 9: Advanced Features | ⬜ Backlog | 0/5 (0%) |
 | Phase 10: Full-Text Search | ✅ Complete | 7/7 (100%) |
+| Phase 11: Productivity Insights | 🚧 In Progress | 2/10 (20%) |
 
 ### By Priority
 
 | Priority | Total | Completed | In Progress | Todo |
 |----------|-------|-----------|-------------|------|
 | P0 (Critical) | 18 | 12 | 0 | 6 |
-| P1 (High) | 19 | 18 | 0 | 1 |
-| P2 (Medium) | 9 | 1 | 0 | 8 |
+| P1 (High) | 23 | 20 | 0 | 3 |
+| P2 (Medium) | 13 | 1 | 0 | 12 |
 | P3 (Low) | 4 | 0 | 0 | 4 |
-| **Total** | **50** | **31** | **0** | **19** |
+| **Total** | **58** | **33** | **0** | **25** |
 
 ---
 

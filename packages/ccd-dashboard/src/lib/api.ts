@@ -121,19 +121,38 @@ export function useSearchResults(
   if (limit) params.set('limit', String(limit));
 
   return useQuery({
-    queryKey: ['search', params.toString()],
+    queryKey: ['search', query, from, to, project, bookmarked, limit],
     queryFn: async () => {
-      console.log('Calling search API with params:', params.toString());
+      console.log('Calling search API with URL:', `${DASHBOARD_API_BASE}/search?${params}`);
       try {
         const response = await fetchApi<ApiResponse<SearchResult[]>>(`/search?${params}`, undefined, DASHBOARD_API_BASE);
         console.log('Search API response:', response);
-        return response.data || [];
+        console.log('Response data:', response.data);
+        console.log('Response data type:', typeof response.data);
+        console.log('Response data length:', response.data?.length);
+        return response.data ?? [];
       } catch (error) {
         console.error('Search API error:', error);
         throw error;
       }
     },
     enabled: !!query && query.length > 0,
-    retry: 1
+    retry: 1,
+    staleTime: 0, // Disable caching
+    refetchOnMount: true,
+    refetchOnWindowFocus: false
+  });
+}
+
+// Streak stats hook
+export function useStreakStats() {
+  return useQuery({
+    queryKey: ['streak'],
+    queryFn: async () => {
+      const response = await fetchApi<ApiResponse<StreakStats>>('/stats/streak', undefined, DASHBOARD_API_BASE);
+      return response.data;
+    },
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5 // 5 minutes cache
   });
 }

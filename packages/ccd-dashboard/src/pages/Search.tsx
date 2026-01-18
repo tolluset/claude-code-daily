@@ -29,6 +29,17 @@ export function SearchPage() {
     bookmarkedOnly,
     20
   );
+    console.info("🚀 : Search.tsx:24: results=", results)
+
+  console.log('Results details:', { results, resultsType: typeof results, resultsLength: results?.length });
+
+  // Debug: Check if results are properly received
+  useEffect(() => {
+    console.log('useEffect debug:', { query, results, isLoading, error });
+  }, [query, results, isLoading, error]);
+
+  // Use real API data
+  const displayResults = results || [];
 
   console.log('Search debug:', { query, results, isLoading, error, project, bookmarkedOnly });
   console.log('Search params:', Object.fromEntries(searchParams.entries()));
@@ -126,14 +137,14 @@ export function SearchPage() {
          </div>
        )}
 
-      {query && !isLoading && results && results.length > 0 && (
+      {query && !isLoading && Array.isArray(displayResults) && displayResults.length > 0 && (
         <div>
           <div className="mb-4 flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              {results.length === 0 ? (
+              {displayResults.length === 0 ? (
                 <span>No results found for "{query}"</span>
               ) : (
-                <span>{results.length} result{results.length !== 1 ? 's' : ''} found for "{query}"</span>
+                <span>{displayResults.length} result{displayResults.length !== 1 ? 's' : ''} found for "{query}"</span>
               )}
             </div>
             <button
@@ -147,7 +158,7 @@ export function SearchPage() {
           </div>
 
           <div className="space-y-4">
-            {results.map((result, index) => (
+            {displayResults.map((result, index) => (
               <Card key={`${result.session_id}-${result.message_id}-${index}`} className="p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-start gap-4">
                   <div className="mt-1">
