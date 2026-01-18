@@ -27,9 +27,18 @@ export function Dashboard() {
     );
   }
 
-  const { stats, sessions } = data!;
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  const { stats, sessions } = data;
   const today = formatDate(new Date().toISOString());
   const bookmarkedCount = sessions.filter(s => s.is_bookmarked).length;
+  const recentSessions = sessions.slice(0, 5);
   const totalTokens = stats.total_input_tokens + stats.total_output_tokens;
   const totalCost = (stats.total_input_cost || 0) + (stats.total_output_cost || 0);
 
@@ -111,13 +120,13 @@ export function Dashboard() {
           <CardTitle className="text-lg">Recent Sessions</CardTitle>
         </CardHeader>
         <CardContent>
-          {sessions.length === 0 ? (
+          {recentSessions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No sessions today
+              No recent sessions
             </div>
           ) : (
             <div className="space-y-2">
-              {sessions.slice(0, 5).map((session) => (
+              {recentSessions.map((session) => (
                 <Link
                   key={session.id}
                   to={`/sessions/${session.id}`}

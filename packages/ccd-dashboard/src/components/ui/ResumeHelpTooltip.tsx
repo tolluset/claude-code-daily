@@ -12,7 +12,7 @@ export function ResumeHelpTooltip({ position = 'left' }: ResumeHelpTooltipProps)
 
   return (
     <div className="relative group">
-      <IconButton type="button" size="sm" title="Resume help">
+      <IconButton type="button" size="sm" title="Resume help" className="cursor-default">
         <HelpCircle className="h-4 w-4" />
       </IconButton>
       <div className={`

@@ -24,7 +24,7 @@ export function IconButton({
 
   return (
     <button
-      className={`${sizeClasses[size]} ${variantClasses[variant]} rounded-lg transition-colors ${className}`}
+      className={`${sizeClasses[size]} ${variantClasses[variant]} rounded-lg transition-colors cursor-pointer ${className}`}
       {...props}
     >
       {children}

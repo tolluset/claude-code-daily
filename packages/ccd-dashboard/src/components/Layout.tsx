@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, MessageSquare, BarChart3, Search, Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from './ThemeProvider';
+import { TokenUsageBadge } from './ui/TokenUsageBadge';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -43,8 +44,10 @@ export function Layout() {
               );
             })}
           </nav>
-          <div className="ml-auto flex items-center">
+          <div className="ml-auto flex items-center gap-2">
+            <TokenUsageBadge />
             <button
+              type="button"
               onClick={toggleTheme}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 w-9"
               aria-label="Toggle theme"

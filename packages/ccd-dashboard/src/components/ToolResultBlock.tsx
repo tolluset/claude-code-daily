@@ -42,7 +42,7 @@ export function ToolResultBlock({
         </div>
         <button
           onClick={handleCopy}
-          className="p-1.5 rounded-lg hover:bg-blue-500/10 transition-all duration-200 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:scale-110"
+          className="p-1.5 rounded-lg hover:bg-blue-500/10 transition-all duration-200 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:scale-110 cursor-pointer"
           title="Copy output"
           type="button"
         >

@@ -91,6 +91,7 @@ ccd/
 | `src/pages/SessionDetail.tsx` | ✅ | Session detail with delete button |
 | `src/pages/Reports.tsx` | ✅ | Reports page with charts and filters |
 | `src/pages/Search.tsx` | ✅ | Full-text search page with result highlighting |
+| `src/components/ThemeProvider.tsx` | ✅ | Dark mode theme provider with localStorage persistence |
 
 ### CCD MCP (packages/ccd-mcp)
 
@@ -131,6 +132,17 @@ ccd/
 | PATCH | /api/v1/insights/:sessionId/notes | ✅ |
 | DELETE | /api/v1/insights/:sessionId | ✅ |
 | GET | /api/v1/insights/recent/:limit? | ✅ |
+
+---
+
+## Dark Mode
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| ThemeProvider implementation | ✅ | React Context with localStorage persistence |
+| Layout theme toggle | ✅ | Moon/Sun icon in header |
+| Code block synchronization | ✅ | Syntax highlighting follows theme |
+| UI text visibility | ✅ | All text elements have dark mode variants (2026-01-19) |
 
 ---
 

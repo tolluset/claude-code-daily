@@ -89,7 +89,7 @@ export const SyntaxHighlightedCode = React.memo(function SyntaxHighlightedCode({
         </div>
         <button
           onClick={handleCopy}
-          className="ml-auto p-1.5 rounded-lg hover:bg-primary/10 transition-all duration-200 text-muted-foreground hover:text-primary hover:scale-110"
+          className="ml-auto p-1.5 rounded-lg hover:bg-primary/10 transition-all duration-200 text-muted-foreground hover:text-primary hover:scale-110 cursor-pointer"
           title="Copy code"
           type="button"
         >

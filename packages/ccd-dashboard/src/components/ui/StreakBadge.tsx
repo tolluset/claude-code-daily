@@ -17,7 +17,7 @@ export function StreakBadge() {
   return (
     <div
       className={`
-        group relative flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-help transition-all
+        group relative flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all
         ${hasStreak
           ? 'bg-orange-50 hover:bg-orange-100'
           : 'bg-gray-100 hover:bg-gray-200'

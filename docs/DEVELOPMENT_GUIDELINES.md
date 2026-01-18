@@ -139,3 +139,109 @@ const { mutate } = useMutation({
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
 - [IMPLEMENTATION.md](./IMPLEMENTATION.md) - API endpoints and implementation details
 - [CODE_STYLE.md](../CLAUDE.md) - Code style conventions
+
+---
+
+## Dark Mode Best Practices
+
+### Color Mapping Pattern
+
+All UI elements must support both light and dark modes using Tailwind's `dark:` prefix. Follow this established color mapping pattern:
+
+#### Text Colors
+
+| Light Mode | Dark Mode | Use Case |
+|------------|-----------|----------|
+| `text-gray-900` | `dark:text-gray-100` | Primary text, headings, important values |
+| `text-gray-700` | `dark:text-gray-300` | Secondary text, labels |
+| `text-gray-500` | `dark:text-gray-400` | Tertiary text, placeholders |
+| `text-gray-400` | `dark:text-gray-500` | Muted icons, less prominent elements |
+
+#### Background Colors
+
+| Light Mode | Dark Mode | Use Case |
+|------------|-----------|----------|
+| `bg-white` | `dark:bg-gray-800` | Cards, dropdowns, panels |
+| `bg-gray-50` | `dark:bg-gray-900` | Page background, sections |
+| `bg-gray-100` | `dark:bg-gray-800` | Hover states |
+
+#### Border Colors
+
+| Light Mode | Dark Mode | Use Case |
+|------------|-----------|----------|
+| `border-gray-300` | `dark:border-gray-600` | Primary borders, inputs |
+| `border-gray-200` | `dark:border-gray-700` | Secondary borders, dividers |
+
+### Implementation Examples
+
+#### Example 1: Card Component
+```tsx
+<Card className="p-6">
+  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Sessions</p>
+  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{total}</p>
+</Card>
+```
+
+#### Example 2: Table Row
+```tsx
+<tr className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+  <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100">{data}</td>
+</tr>
+```
+
+#### Example 3: Dropdown/Select
+```tsx
+<select className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+  <option>All Projects</option>
+</select>
+```
+
+### Reference Implementations
+
+Use these files as reference for dark mode patterns:
+- `packages/ccd-dashboard/src/pages/SessionDetail.tsx` - Session detail with dark mode
+- `packages/ccd-dashboard/src/components/ui/SessionInsights.tsx` - Insights display with dark mode
+- `packages/ccd-dashboard/src/pages/Reports.tsx` - Reports page (updated 2026-01-19)
+- `packages/ccd-dashboard/src/components/ui/DateRangePicker.tsx` - Date picker (updated 2026-01-19)
+
+### Testing Checklist
+
+When adding or modifying UI components:
+
+1. **Test both modes**: Toggle between light and dark in the header
+2. **Check all text**: Ensure all text elements have appropriate contrast
+3. **Verify backgrounds**: Backgrounds should be clearly different from text
+4. **Test hover states**: All interactive elements should have visible hover states in both modes
+5. **Check borders**: Borders should be visible but not distracting
+6. **Test all pages**: Navigate through all pages in both modes
+
+### Common Pitfalls
+
+❌ **Pitfall 1: Hardcoded Light Mode Colors**
+```tsx
+// BAD: Only works in light mode
+<p className="text-gray-900">{title}</p>
+<p className="text-gray-500">{description}</p>
+
+// GOOD: Works in both modes
+<p className="text-gray-900 dark:text-gray-100">{title}</p>
+<p className="text-gray-500 dark:text-gray-400">{description}</p>
+```
+
+❌ **Pitfall 2: Missing Dark Mode on Borders**
+```tsx
+// BAD: Border invisible in dark mode
+<div className="border border-gray-300">{content}</div>
+
+// GOOD: Border visible in both modes
+<div className="border border-gray-300 dark:border-gray-600">{content}</div>
+```
+
+❌ **Pitfall 3: Background Color Mismatch**
+```tsx
+// BAD: White background in dark mode
+<div className="bg-white">{content}</div>
+
+// GOOD: Dark background in dark mode
+<div className="bg-white dark:bg-gray-800">{content}</div>
+```

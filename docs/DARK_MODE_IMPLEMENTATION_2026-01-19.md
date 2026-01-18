@@ -70,6 +70,37 @@ To test the implementation:
 4. Refresh the page - theme should persist
 5. Check all pages: Dashboard, Sessions, Search, Reports
 
+## Text Visibility Fixes (2026-01-19)
+
+Fixed hardcoded light mode colors in dark mode to improve readability:
+
+### DateRangePicker Component (11 locations)
+- Button: `border-gray-300 dark:border-gray-600`, `hover:bg-gray-50 dark:hover:bg-gray-800`
+- Calendar icon: `text-gray-500 dark:text-gray-400`
+- Chevron icon: `text-gray-400 dark:text-gray-500`
+- Dropdown panel: `bg-white dark:bg-gray-800`, `border-gray-200 dark:border-gray-700`
+- Labels: `text-gray-700 dark:text-gray-300`, `text-gray-500 dark:text-gray-400`
+- Preset buttons: `hover:bg-gray-100 dark:hover:bg-gray-800`
+- Input fields: `border-gray-300 dark:border-gray-600`
+
+### Reports Page (14 locations)
+- Page title: `text-gray-900 dark:text-gray-100`
+- Filter icon: `text-gray-500 dark:text-gray-400`
+- Project dropdown: `border-gray-300 dark:border-gray-600`, `bg-white dark:bg-gray-800`
+- Loading state: `text-gray-500 dark:text-gray-400`
+- Card labels: `text-gray-500 dark:text-gray-400`
+- Card values: `text-gray-900 dark:text-gray-100`
+- Section titles: `text-gray-900 dark:text-gray-100`
+- Empty states: `text-gray-500 dark:text-gray-400`
+- Table headers: `text-gray-500 dark:text-gray-400`
+- Table cells: `text-gray-900 dark:text-gray-100`
+- Table hover: `hover:bg-gray-50 dark:hover:bg-gray-800`
+
+### Sessions Page (1 location)
+- Project dropdown: Same pattern as Reports page
+
+All gray colors now have dark mode variants following established patterns from SessionDetail.tsx and SessionInsights.tsx.
+
 ## Future Enhancements
 - Add system theme detection (prefer-color-scheme)
 - Add 'auto' mode that follows system preference

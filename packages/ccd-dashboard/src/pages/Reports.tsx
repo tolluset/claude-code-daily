@@ -64,7 +64,7 @@ export function Reports() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -80,7 +80,7 @@ export function Reports() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Reports</h1>
         <div className="flex items-center gap-3">
           <DateRangePicker
             value={dateRange}
@@ -92,11 +92,11 @@ export function Reports() {
           />
           {projects.length > 0 && (
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500" />
+              <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
               >
                 <option value="">All Projects</option>
                 {projects.map((project) => (
@@ -110,56 +110,56 @@ export function Reports() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <Card className="p-6">
-          <p className="text-sm text-gray-500 mb-1">Total Sessions</p>
-          <p className="text-2xl font-bold text-gray-900">{totalSessions}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Sessions</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalSessions}</p>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-gray-500 mb-1">Total Messages</p>
-          <p className="text-2xl font-bold text-gray-900">{totalMessages.toLocaleString()}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Messages</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalMessages.toLocaleString()}</p>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-gray-500 mb-1">Input Tokens</p>
-          <p className="text-2xl font-bold text-gray-900">{totalInputTokens.toLocaleString()}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Input Tokens</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalInputTokens.toLocaleString()}</p>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-gray-500 mb-1">Output Tokens</p>
-          <p className="text-2xl font-bold text-gray-900">{totalOutputTokens.toLocaleString()}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Output Tokens</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalOutputTokens.toLocaleString()}</p>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-gray-500 mb-1">Avg Sessions/Day</p>
-          <p className="text-2xl font-bold text-gray-900">{avgSessionsPerDay}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Avg Sessions/Day</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{avgSessionsPerDay}</p>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Token Usage Trend</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Token Usage Trend</h2>
           {stats.length > 0 ? (
             <TokenTrendChart data={stats} height={250} />
           ) : (
-            <div className="flex items-center justify-center h-[250px] text-gray-500">
+            <div className="flex items-center justify-center h-[250px] text-gray-500 dark:text-gray-400">
               No data available
             </div>
           )}
         </Card>
 
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Sessions per Day</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Sessions per Day</h2>
           {stats.length > 0 ? (
             <SessionBarChart data={stats} height={250} />
           ) : (
-            <div className="flex items-center justify-center h-[250px] text-gray-500">
+            <div className="flex items-center justify-center h-[250px] text-gray-500 dark:text-gray-400">
               No data available
             </div>
           )}
         </Card>
 
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Distribution</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Project Distribution</h2>
           {projectData.length > 0 ? (
             <ProjectPieChart data={projectData} height={250} />
           ) : (
-            <div className="flex items-center justify-center h-[250px] text-gray-500">
+            <div className="flex items-center justify-center h-[250px] text-gray-500 dark:text-gray-400">
               No project data available
             </div>
           )}
@@ -167,34 +167,34 @@ export function Reports() {
       </div>
 
       <Card className="p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Daily Statistics</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Daily Statistics</h2>
         {stats.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2 px-4 text-sm font-medium text-gray-500">Date</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Sessions</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Messages</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Input Tokens</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Output Tokens</th>
+                  <th className="text-left py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Date</th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Sessions</th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Messages</th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Input Tokens</th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Output Tokens</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.map((stat) => (
-                  <tr key={stat.date} className="border-b hover:bg-gray-50">
-                    <td className="py-2 px-4 text-sm text-gray-900">{stat.date}</td>
-                    <td className="py-2 px-4 text-sm text-gray-900 text-right">{stat.session_count}</td>
-                    <td className="py-2 px-4 text-sm text-gray-900 text-right">{stat.message_count.toLocaleString()}</td>
-                    <td className="py-2 px-4 text-sm text-gray-900 text-right">{stat.total_input_tokens.toLocaleString()}</td>
-                    <td className="py-2 px-4 text-sm text-gray-900 text-right">{stat.total_output_tokens.toLocaleString()}</td>
+                  <tr key={stat.date} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100">{stat.date}</td>
+                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100 text-right">{stat.session_count}</td>
+                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100 text-right">{stat.message_count.toLocaleString()}</td>
+                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100 text-right">{stat.total_input_tokens.toLocaleString()}</td>
+                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100 text-right">{stat.total_output_tokens.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-[200px] text-gray-500">
+          <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
             No data available
           </div>
         )}

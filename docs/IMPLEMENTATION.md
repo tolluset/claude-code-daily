@@ -294,6 +294,24 @@ MessageContent (react-markdown)
 
 ---
 
+## Token Usage Badge
+
+실시간 토큰 사용량을 헤더에 표시하는 컴포넌트
+
+**위치**: 헤더 우측 (테마 토글 왼쪽)
+
+**기능**:
+- 오늘의 총 토큰 사용량 표시
+- 호버시 상세 정보 (일/주/월별)
+- 30초마다 자동 갱신
+- 다크 모드 지원
+
+**구현 파일**:
+- `packages/ccd-dashboard/src/components/ui/TokenUsageBadge.tsx`
+- `packages/ccd-dashboard/src/lib/token-utils.ts`
+
+---
+
 ## Implementation Phases
 
 ### Phase 1: Infrastructure ✅
