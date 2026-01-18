@@ -93,6 +93,35 @@ export interface TodayStatsResponse {
   sessions: Session[];
 }
 
+// Session Insights types
+export interface SessionInsight {
+  id: number;
+  session_id: string;
+  summary: string | null;
+  key_learnings: string[];
+  problems_solved: string[];
+  code_patterns: string[];
+  technologies: string[];
+  difficulty: 'easy' | 'medium' | 'hard' | null;
+  generated_at: string;
+  user_notes: string | null;
+}
+
+export interface CreateInsightRequest {
+  session_id: string;
+  summary?: string;
+  key_learnings?: string[];
+  problems_solved?: string[];
+  code_patterns?: string[];
+  technologies?: string[];
+  difficulty?: 'easy' | 'medium' | 'hard';
+  user_notes?: string;
+}
+
+export interface UpdateInsightNotesRequest {
+  notes: string;
+}
+
 // Search types
 export interface SearchResult {
   session_id: string;

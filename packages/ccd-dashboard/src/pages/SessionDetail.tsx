@@ -1,9 +1,10 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useSession, useSessionMessages, toggleBookmark, deleteSession } from '@/lib/api';
+import { useSession, useSessionMessages, toggleBookmark, deleteSession, useSessionInsight, updateInsightNotes, deleteInsight } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
+import { SessionInsights } from '@/components/ui/SessionInsights';
 import { formatDateTime, formatNumber } from '@/lib/utils';
-import { Star, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder, HelpCircle, Trash2 } from 'lucide-react';
+import { Star, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder, HelpCircle, Trash2, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -12,8 +13,10 @@ export function SessionDetail() {
   const navigate = useNavigate();
   const { data: session, isLoading: sessionLoading } = useSession(id!);
   const { data: messages, isLoading: messagesLoading } = useSessionMessages(id!);
+  const { data: insight, isLoading: insightLoading, refetch: refetchInsight } = useSessionInsight(id);
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   if (sessionLoading) {
     return (
@@ -54,6 +57,37 @@ export function SessionDetail() {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
       navigate('/sessions');
     }
+  };
+
+  const handleGenerateInsights = async () => {
+    setIsGenerating(true);
+    try {
+      // Copy the session ID and show instructions
+      await navigator.clipboard.writeText(session.id);
+      alert(
+        `Session ID copied to clipboard!\n\n` +
+        `To generate insights:\n` +
+        `1. Open Claude Code\n` +
+        `2. Ask: "Analyze session ${session.id} and extract insights"\n` +
+        `3. Claude will use MCP tools to analyze and save insights\n` +
+        `4. Refresh this page to see the results`
+      );
+    } catch (error) {
+      console.error('Failed to copy session ID:', error);
+      alert('Failed to copy session ID');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleUpdateNotes = async (notes: string) => {
+    await updateInsightNotes(session.id, notes);
+    await refetchInsight();
+  };
+
+  const handleDeleteInsight = async () => {
+    await deleteInsight(session.id);
+    await refetchInsight();
   };
 
   const isActive = !session.ended_at;
@@ -170,6 +204,45 @@ export function SessionDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Session Insights */}
+      {insightLoading ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            Loading insights...
+          </CardContent>
+        </Card>
+      ) : insight ? (
+        <SessionInsights
+          insight={insight}
+          onNotesUpdate={handleUpdateNotes}
+          onDelete={handleDeleteInsight}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">💡 Session Insights</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center py-8">
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                No insights generated yet for this session.
+              </p>
+              <button
+                onClick={handleGenerateInsights}
+                disabled={isGenerating}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                <Sparkles className="h-4 w-4" />
+                {isGenerating ? 'Preparing...' : 'Generate Insights'}
+              </button>
+              <p className="text-xs text-muted-foreground">
+                Uses Claude Code's built-in AI to analyze this session
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Messages */}
       <Card>

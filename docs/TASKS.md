@@ -295,6 +295,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | P11-006 | Cost Dashboard cards | P1 | ⬜ | P11-002 | Daily/monthly cost display |
 | P11-007 | Heatmap Calendar | P2 | ⬜ | None | GitHub-style activity calendar |
 | P11-008 | Tags UI (add/remove/filter) | P2 | ⬜ | P11-003 | Session tagging interface |
+| P11-012 | Insights UI (view/edit) | P1 | ⬜ | P11-011 | SessionInsights component + SessionDetail integration |
+| P11-013 | Auto-extract insights button | P1 | ⬜ | P11-011, P11-012 | "Generate Insights" button in SessionDetail |
 
 ### MCP & Settings
 
@@ -334,7 +336,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | Phase 8: Quality & Testing | 🚧 In Progress | 2/3 (67%) |
 | Phase 9: Advanced Features | ⬜ Backlog | 0/5 (0%) |
 | Phase 10: Full-Text Search | ✅ Complete | 7/7 (100%) |
-| Phase 11: Productivity Insights | 🚧 In Progress | 3/11 (27%) |
+| Phase 11: Productivity Insights | 🚧 In Progress | 3/13 (23%) |
 
 ### By Priority
 
@@ -344,7 +346,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | P1 (High) | 24 | 21 | 0 | 3 |
 | P2 (Medium) | 13 | 1 | 0 | 12 |
 | P3 (Low) | 4 | 0 | 0 | 4 |
-| **Total** | **59** | **34** | **0** | **25** |
+| **Total** | **61** | **34** | **0** | **27** |
 
 ---
 
