@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, subDays } from 'date-fns';
 import { useDailyStats, useSessions } from '../lib/api';
 import type { DailyStats } from '@ccd/types';
@@ -8,6 +8,7 @@ import { SessionBarChart } from '../components/ui/SessionBarChart';
 import { ProjectPieChart } from '../components/ui/ProjectPieChart';
 import { Card } from '../components/ui/Card';
 import { Filter } from 'lucide-react';
+import { extractProjectList } from '../lib/utils';
 
 export function Reports() {
   const [dateRange, setDateRange] = useState(() => ({
@@ -25,7 +26,7 @@ export function Reports() {
   );
 
   const allSessions = allData?.sessions || [];
-  const projects = Array.from(new Set(allSessions.map(s => s.project_name).filter((p): p is string => Boolean(p)))).sort();
+  const projects = extractProjectList(allSessions);
 
   const stats = dailyStats || [];
 
@@ -35,20 +36,19 @@ export function Reports() {
   const totalOutputTokens = stats.reduce((sum: number, s: DailyStats) => sum + s.total_output_tokens, 0);
   const avgSessionsPerDay = stats.length > 0 ? (totalSessions / stats.length).toFixed(1) : '0';
 
-  // Calculate project distribution for pie chart
-  const projectData = (() => {
+  const projectData = useMemo(() => {
     const filteredSessions = selectedProject
-      ? allSessions.filter(s => s.project_name === selectedProject)
-      : allSessions.filter(s => {
+      ? allSessions.filter((s) => s.project_name === selectedProject)
+      : allSessions.filter((s) => {
           const sessionDate = new Date(s.started_at);
           return sessionDate >= dateRange.from && sessionDate <= dateRange.to;
         });
 
     const projectCounts: Record<string, number> = {};
-    filteredSessions.forEach(session => {
+    for (const session of filteredSessions) {
       const project = session.project_name || 'Unknown';
       projectCounts[project] = (projectCounts[project] || 0) + 1;
-    });
+    }
 
     const total = Object.values(projectCounts).reduce((sum, count) => sum + count, 0);
 
@@ -59,7 +59,7 @@ export function Reports() {
         percentage: (value / total) * 100
       }))
       .sort((a, b) => b.value - a.value);
-  })();
+  }, [allSessions, selectedProject, dateRange]);
 
   if (isLoading) {
     return (

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Copy, Check } from 'lucide-react';
 import { highlightCode } from '../lib/shiki-highlighter';
 import { cn } from '../lib/utils';
@@ -10,7 +11,7 @@ export interface SyntaxHighlightedCodeProps {
   className?: string;
 }
 
-export function SyntaxHighlightedCode({
+export const SyntaxHighlightedCode = React.memo(function SyntaxHighlightedCode({
   code,
   language,
   className,
@@ -21,7 +22,16 @@ export function SyntaxHighlightedCode({
   const [copied, setCopied] = useState(false);
   const { theme } = useTheme();
 
-  // Highlight code when code, language, or theme changes
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+    }
+  }, [code]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -51,17 +61,6 @@ export function SyntaxHighlightedCode({
     };
   }, [code, language, theme]);
 
-  // Copy to clipboard
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy code:', err);
-    }
-  };
-
   if (error) {
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
@@ -80,7 +79,6 @@ export function SyntaxHighlightedCode({
 
   return (
     <div className={cn('relative group not-prose rounded-xl overflow-hidden border border-border/50 shadow-lg hover:shadow-xl transition-shadow duration-200 bg-gradient-to-br from-background to-muted/20', className)}>
-      {/* Header with language label and copy button */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-muted/30 to-muted/10 backdrop-blur-sm border-b border-border/30">
         <div className="flex items-center gap-2">
           {language && (
@@ -103,11 +101,11 @@ export function SyntaxHighlightedCode({
         </button>
       </div>
 
-      {/* Code content */}
       <div
         className="overflow-x-auto [&>pre]:!m-0 [&>pre]:!rounded-none [&>pre]:!border-0 [&>pre]:!p-6 [&>pre]:!bg-transparent"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>
   );
-}
+});
+

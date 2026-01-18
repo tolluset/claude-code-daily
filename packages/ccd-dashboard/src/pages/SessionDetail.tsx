@@ -1,13 +1,14 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useSession, useSessionMessages, toggleBookmark, deleteSession, useSessionInsight, updateInsightNotes, deleteInsight } from '@/lib/api';
+import { useSession, useSessionMessages, useSessionInsight, updateInsightNotes, deleteInsight } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
 import { SessionInsights } from '@/components/ui/SessionInsights';
 import { MessageContent } from '@/components/MessageContent';
 import { formatDateTime, formatNumber } from '@/lib/utils';
-import { Star, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder, HelpCircle, Trash2, Sparkles } from 'lucide-react';
-import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { Star, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder, Trash2, Sparkles, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useSessionActions } from '@/hooks/useSessionActions';
+import { ResumeHelpTooltip } from '@/components/ui/ResumeHelpTooltip';
 import { toast } from 'sonner';
 
 export function SessionDetail() {
@@ -16,9 +17,15 @@ export function SessionDetail() {
   const { data: session, isLoading: sessionLoading } = useSession(id!);
   const { data: messages, isLoading: messagesLoading } = useSessionMessages(id!);
   const { data: insight, isLoading: insightLoading, refetch: refetchInsight } = useSessionInsight(id);
-  const queryClient = useQueryClient();
-  const [copied, setCopied] = useState(false);
+  const { handleBookmark, handleCopyId, handleDelete, copiedId } = useSessionActions();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notes, setNotes] = useState(insight?.user_notes || '');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  useEffect(() => {
+    setNotes(insight?.user_notes || '');
+  }, [insight]);
 
   if (sessionLoading) {
     return (
@@ -39,29 +46,9 @@ export function SessionDetail() {
     );
   }
 
-  const handleBookmark = async () => {
-    await toggleBookmark(session.id);
-    // Invalidate all related queries to ensure UI updates across all pages
-    queryClient.invalidateQueries({ queryKey: ['session', id] });
-    queryClient.invalidateQueries({ queryKey: ['sessions'] });
-    queryClient.invalidateQueries({ queryKey: ['search'] }); // All search results
-  };
-
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(`/resume ${session.id}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDelete = async () => {
-    const confirmed = window.confirm(
-      `Delete session "${session.project_name || session.id.slice(0, 8)}"?\nThis will also delete all messages in this session.`
-    );
-    if (confirmed) {
-      await deleteSession(session.id);
-      queryClient.invalidateQueries({ queryKey: ['sessions'] });
-      navigate('/sessions');
-    }
+  const handleDeleteWithNav = async () => {
+    await handleDelete(session);
+    navigate('/sessions');
   };
 
   const handleGenerateInsights = async () => {
@@ -104,6 +91,25 @@ export function SessionDetail() {
     await refetchInsight();
   };
 
+  const handleSaveNotes = async () => {
+    if (!session?.id) return;
+
+    setIsSavingNotes(true);
+    try {
+      await updateInsightNotes(session.id, notes);
+      setIsEditingNotes(false);
+      await refetchInsight();
+      toast.success('Notes saved successfully');
+    } catch (error) {
+      console.error('Failed to save notes:', error);
+      toast.error('Failed to save notes', {
+        description: 'Please try again',
+      });
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
   const isActive = !session.ended_at;
 
   return (
@@ -133,7 +139,7 @@ export function SessionDetail() {
         <IconButton
           type="button"
           size="lg"
-          onClick={handleBookmark}
+          onClick={() => handleBookmark(session)}
           title="Toggle bookmark"
         >
           <Star
@@ -147,7 +153,7 @@ export function SessionDetail() {
           variant="destructive"
           size="lg"
           type="button"
-          onClick={handleDelete}
+          onClick={handleDeleteWithNav}
           title="Delete session"
         >
           <Trash2 className="h-6 w-6" />
@@ -179,33 +185,16 @@ export function SessionDetail() {
             <IconButton
               type="button"
               size="sm"
-              onClick={handleCopyId}
+              onClick={() => handleCopyId(session.id)}
               title="Copy session ID"
             >
-              {copied ? (
+              {copiedId === session.id ? (
                 <Check className="h-4 w-4 text-green-500" />
               ) : (
                 <Copy className="h-4 w-4" />
               )}
             </IconButton>
-            <div className="relative group">
-              <IconButton type="button" size="sm" title="Resume help">
-                <HelpCircle className="h-4 w-4" />
-              </IconButton>
-              <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-72 p-3 rounded-lg border bg-popover text-popover-foreground shadow-md text-xs">
-                <div className="font-medium mb-2">Resume this session:</div>
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-muted-foreground">Terminal:</span>
-                    <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">claude --resume &lt;session_id&gt;</code>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Claude Code:</span>
-                    <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">/resume &lt;session_id&gt;</code>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ResumeHelpTooltip position="left" />
           </div>
 
           {session.bookmark_note && (
@@ -231,29 +220,89 @@ export function SessionDetail() {
           onDelete={handleDeleteInsight}
         />
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">💡 Session Insights</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center py-8">
-            <div className="space-y-4">
-              <p className="text-muted-foreground">
-                No insights generated yet for this session.
-              </p>
-              <button
-                onClick={handleGenerateInsights}
-                disabled={isGenerating}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                <Sparkles className="h-4 w-4" />
-                {isGenerating ? 'Preparing...' : 'Generate Insights'}
-              </button>
-              <p className="text-xs text-muted-foreground">
-                Uses Claude Code's built-in AI to analyze this session
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">💡 Session Insights</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center py-8">
+              <div className="space-y-4">
+                <p className="text-muted-foreground">
+                  No insights generated yet for this session.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleGenerateInsights}
+                  disabled={isGenerating}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {isGenerating ? 'Preparing...' : 'Generate Insights'}
+                </button>
+                <p className="text-xs text-muted-foreground">
+                  Uses Claude Code's built-in AI to analyze this session
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                📝 Session Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {isEditingNotes ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full p-3 border rounded text-sm min-h-[120px] bg-background"
+                      placeholder="Add your notes about this session..."
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveNotes}
+                        disabled={isSavingNotes}
+                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isSavingNotes ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotes(insight?.user_notes || '');
+                          setIsEditingNotes(false);
+                        }}
+                        disabled={isSavingNotes}
+                        className="px-4 py-2 text-sm border rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="p-3 bg-muted/50 rounded text-sm min-h-[80px]">
+                      {notes || <span className="italic text-muted-foreground">No notes yet</span>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingNotes(true)}
+                      className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mt-2"
+                    >
+                      {notes ? 'Edit notes' : 'Add notes'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {/* Messages */}

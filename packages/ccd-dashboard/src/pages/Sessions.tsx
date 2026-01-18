@@ -1,30 +1,27 @@
-import { useSessions, toggleBookmark, deleteSession } from '@/lib/api';
+import { useSessions } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
-import { formatDate, formatTime } from '@/lib/utils';
-import { Star, GitBranch, Clock, Copy, Check, Trash2, HelpCircle, Filter } from 'lucide-react';
+import { formatDate, formatTime, extractProjectList } from '@/lib/utils';
+import { Star, GitBranch, Clock, Copy, Check, Trash2, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, memo } from 'react';
+import { useSessionActions } from '@/hooks/useSessionActions';
+import { ResumeHelpTooltip } from '@/components/ui/ResumeHelpTooltip';
 import type { Session } from '@ccd/types';
 
 export function Sessions() {
-  const queryClient = useQueryClient();
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
 
   const { data: allData } = useSessions();
+  const { handleBookmark, handleCopyId, handleDelete, copiedId } = useSessionActions();
   const { data, isLoading, error } = useSessions(
     undefined,
     dateRange.from ? formatDate(dateRange.from.toISOString()) : undefined,
     dateRange.to ? formatDate(dateRange.to.toISOString()) : undefined,
     selectedProject || undefined
   );
-
-  const allSessions = allData?.sessions || [];
-  const projects = Array.from(new Set(allSessions.map(s => s.project_name).filter((p): p is string => Boolean(p)))).sort();
 
   if (isLoading) {
     return (
@@ -50,34 +47,8 @@ export function Sessions() {
   const bookmarked = sessions.filter(s => s.is_bookmarked);
   const regular = sessions.filter(s => !s.is_bookmarked);
 
-  const handleBookmark = async (session: Session, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    await toggleBookmark(session.id);
-    // Invalidate all related queries to ensure UI updates across all pages
-    queryClient.invalidateQueries({ queryKey: ['sessions'] });
-    queryClient.invalidateQueries({ queryKey: ['search'] }); // All search results
-  };
-
-  const handleCopyId = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    navigator.clipboard.writeText(`/resume ${id}`);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleDelete = async (session: Session, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const confirmed = window.confirm(
-      `Delete session "${session.project_name || session.id.slice(0, 8)}"?\nThis will also delete all messages in this session.`
-    );
-    if (confirmed) {
-      await deleteSession(session.id);
-      queryClient.invalidateQueries({ queryKey: ['sessions'] });
-    }
-  };
+  const allSessions = allData?.sessions || [];
+  const projects = extractProjectList(allSessions);
 
   return (
     <div className="space-y-6">
@@ -176,7 +147,7 @@ interface SessionItemProps {
   copiedId: string | null;
 }
 
-function SessionItem({ session, onBookmark, onCopyId, onDelete, copiedId }: SessionItemProps) {
+const SessionItem = memo(function SessionItem({ session, onBookmark, onCopyId, onDelete, copiedId }: SessionItemProps) {
   const isActive = !session.ended_at;
 
   return (
@@ -242,29 +213,7 @@ function SessionItem({ session, onBookmark, onCopyId, onDelete, copiedId }: Sess
           )}
           <code className="text-xs">{session.id.slice(0, 8)}</code>
         </button>
-        <div className="relative group">
-          <IconButton
-            type="button"
-            size="sm"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            title="Resume help"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </IconButton>
-          <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50 w-72 p-3 rounded-lg border bg-popover text-popover-foreground shadow-md text-xs">
-            <div className="font-medium mb-2">Resume this session:</div>
-            <div className="space-y-2">
-              <div>
-                <span className="text-muted-foreground">Terminal:</span>
-                <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">claude --resume &lt;session_id&gt;</code>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Claude Code:</span>
-                <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">/resume &lt;session_id&gt;</code>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ResumeHelpTooltip position="right" />
         <IconButton
           variant="destructive"
           size="sm"
@@ -276,4 +225,5 @@ function SessionItem({ session, onBookmark, onCopyId, onDelete, copiedId }: Sess
       </div>
     </Link>
   );
-}
+});
+

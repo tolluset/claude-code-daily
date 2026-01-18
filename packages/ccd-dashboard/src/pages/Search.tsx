@@ -11,8 +11,7 @@ export function SearchPage() {
   const [searchInput, setSearchInput] = useState(query);
   const [project, setProject] = useState(searchParams.get('project') || '');
   const [bookmarkedOnly, setBookmarkedOnly] = useState(searchParams.get('bookmarked') === 'true');
-
-
+  const MAX_SEARCH_LENGTH = 200;
 
   useEffect(() => {
     const currentQuery = searchParams.get('q') || '';
@@ -30,14 +29,17 @@ export function SearchPage() {
     20
   );
 
-  // Use real API data
   const displayResults = results || [];
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchInput.trim()) {
+    const trimmedQuery = searchInput.trim();
+    if (trimmedQuery.length > MAX_SEARCH_LENGTH) {
+      return;
+    }
+    if (trimmedQuery) {
       const params = new URLSearchParams();
-      params.set('q', searchInput.trim());
+      params.set('q', trimmedQuery);
       if (project) params.set('project', project);
       if (bookmarkedOnly) params.set('bookmarked', 'true');
       setSearchParams(params, { replace: true });
@@ -83,11 +85,17 @@ export function SearchPage() {
             <input
               type="text"
               value={searchInput}
+              maxLength={MAX_SEARCH_LENGTH}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search sessions and messages..."
               className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            {searchInput.length > 0 && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                {searchInput.length}/{MAX_SEARCH_LENGTH}
+              </div>
+            )}
           </div>
         </form>
 

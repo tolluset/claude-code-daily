@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { Session } from '@ccd/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -39,3 +40,27 @@ export function formatDateTime(dateStr: string): string {
     minute: '2-digit'
   });
 }
+
+/**
+ * Extract unique project names from sessions
+ * Returns sorted array of project names, filtering out null/undefined values
+ *
+ * @param sessions - Array of sessions
+ * @returns Sorted array of unique project names
+ *
+ * @example
+ * ```tsx
+ * const projectList = extractProjectList(allSessions);
+ * // => ['project-a', 'project-b', 'project-c']
+ * ```
+ */
+export function extractProjectList(sessions: Session[]): string[] {
+  return Array.from(
+    new Set(
+      sessions
+        .map((s) => s.project_name)
+        .filter((p): p is string => Boolean(p))
+    )
+  ).sort();
+}
+

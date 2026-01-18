@@ -64,6 +64,8 @@ ccd/
 
 | File | Status | Description |
 |------|--------|-------------|
+| `vite.config.ts` | ✅ | Vite configuration with React Compiler |
+| `package.json` | ✅ | Dependencies (React 19, TanStack Query, etc.) |
 | `src/main.tsx` | ✅ | React entry point |
 | `src/App.tsx` | ✅ | Router setup (Dashboard, Sessions, Reports, Search) |
 | `src/lib/api.ts` | ✅ | TanStack Query + API client |

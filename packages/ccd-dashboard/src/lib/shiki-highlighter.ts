@@ -40,7 +40,7 @@ const OPTIONAL_LANGUAGES: BundledLanguage[] = [
 /**
  * All supported languages (for validation)
  */
-const ALL_SUPPORTED_LANGUAGES = [...CRITICAL_LANGUAGES, ...OPTIONAL_LANGUAGES];
+const SUPPORTED_LANGUAGES = [...CRITICAL_LANGUAGES, ...OPTIONAL_LANGUAGES];
 
 /**
  * Themes for light and dark modes

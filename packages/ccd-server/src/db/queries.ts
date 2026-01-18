@@ -604,13 +604,10 @@ export function createOrUpdateInsight(data: CreateInsightRequest): SessionInsigh
 }
 
 export function updateInsightNotes(sessionId: string, notes: string): void {
-  const stmt = db.prepare(`
-    UPDATE session_insights
-    SET user_notes = ?
-    WHERE session_id = ?
-  `);
-
-  stmt.run(notes, sessionId);
+  createOrUpdateInsight({
+    session_id: sessionId,
+    user_notes: notes
+  });
 }
 
 export function deleteSessionInsight(sessionId: string): void {
