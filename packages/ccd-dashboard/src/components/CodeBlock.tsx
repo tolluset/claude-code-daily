@@ -24,8 +24,17 @@ export function CodeBlock({ inline, className, children, ...props }: CodeBlockPr
   const languageMatch = /language-(\w+)/.exec(className || '');
   const language = languageMatch ? languageMatch[1] : undefined;
 
+  // Enhanced inline detection:
+  // 1. Explicit inline prop from ReactMarkdown
+  // 2. Short code without newlines (likely inline code)
+  // 3. Code that looks like inline patterns (single expressions, short snippets)
+  const shouldRenderInline = 
+    inline || 
+    (!code.includes('\n') && code.length < 100) ||
+    (code.trim().length < 60 && !language);
+
   // Inline code: simple styling, no syntax highlighting
-  if (inline) {
+  if (shouldRenderInline) {
     return (
       <code
         className="px-1.5 py-0.5 bg-muted rounded text-sm font-mono"

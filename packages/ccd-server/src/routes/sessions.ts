@@ -135,6 +135,23 @@ sessions.delete('/:id', (c) => {
   }
 });
 
+// Clean empty sessions
+sessions.post('/clean-empty', (c) => {
+  try {
+    const result = SessionService.cleanEmptySessions();
+    return c.json(successResponse({
+      deleted: result.deleted,
+      count: result.deleted.length,
+      affectedDates: result.sessions
+    }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return c.json(errorResponse(error.message), { status: error.statusCode } as any);
+    }
+    throw error;
+  }
+});
+
 // List messages for a session
 sessions.get('/:id/messages', (c) => {
   try {

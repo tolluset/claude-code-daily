@@ -19,14 +19,29 @@ export function isDiffContent(code: string): boolean {
  * - Line number patterns: "  123→" (Read tool output format)
  */
 export function isToolResult(code: string, language?: string): boolean {
-  // Check language hint
-  if (language && ['bash', 'shell', 'sh'].includes(language.toLowerCase())) {
+  // Tool results need to meet stricter criteria to avoid false positives
+  
+  // Check for Read tool's line number pattern (e.g., "  123→")
+  const lineNumberPattern = /^\s*\d+→/m;
+  if (lineNumberPattern.test(code)) {
     return true;
   }
 
-  // Check for line number pattern used by Read tool (e.g., "  123→")
-  const lineNumberPattern = /^\s*\d+→/m;
-  return lineNumberPattern.test(code);
+  // For bash/shell language hint, require additional evidence:
+  // - Multi-line content OR
+  // - Contains command prompt patterns ($ or #) AND reasonable length
+  if (language && ['bash', 'shell', 'sh'].includes(language.toLowerCase())) {
+    const lines = code.trim().split('\n');
+    const hasMultipleLines = lines.length > 2;
+    const hasCommandPrompt = /^[\$#]\s+/m.test(code);
+    const hasReasonableLength = code.length > 20;
+    
+    // Only treat as tool result if it looks like actual command output
+    return (hasMultipleLines && hasReasonableLength) || 
+           (hasCommandPrompt && hasReasonableLength);
+  }
+
+  return false;
 }
 
 /**

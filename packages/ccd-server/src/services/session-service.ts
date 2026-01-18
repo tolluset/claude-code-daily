@@ -8,7 +8,8 @@ import {
   deleteSession,
   getMessages,
   incrementSessionCount,
-  updateSessionSummary
+  updateSessionSummary,
+  cleanEmptySessions
 } from '../db/queries';
 import { validateRequired, validateStringEnum, validateDateString, validateDateRange, validatePositiveInteger, Errors } from '../utils/errors';
 import type {
@@ -139,5 +140,12 @@ export class SessionService {
     // Verify session exists
     SessionService.getSession(id);
     return getMessages(id);
+  }
+
+  /**
+   * Clean empty sessions (sessions without messages)
+   */
+  static cleanEmptySessions(): { deleted: string[]; sessions: string[] } {
+    return cleanEmptySessions();
   }
 }
