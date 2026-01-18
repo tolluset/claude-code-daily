@@ -1,0 +1,19 @@
+{
+  "name": "claude-code-daily",
+  "owner": {
+    "name": "tolluset"
+  },
+  "metadata": {
+    "description": "Claude Code Daily - Session tracking and analytics",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "ccd",
+      "source": "./packages/ccd-plugin",
+      "description": "Claude Code Daily session tracking plugin",
+      "version": "0.1.0",
+      "keywords": ["analytics", "session", "tracking", "dashboard"]
+    }
+  ]
+}

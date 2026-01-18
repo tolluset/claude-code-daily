@@ -1,0 +1,194 @@
+import { useParams, Link } from 'react-router-dom';
+import { useSession, useSessionMessages, toggleBookmark } from '@/lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { formatDateTime, formatNumber } from '@/lib/utils';
+import { Star, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder } from 'lucide-react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
+export function SessionDetail() {
+  const { id } = useParams<{ id: string }>();
+  const { data: session, isLoading: sessionLoading } = useSession(id!);
+  const { data: messages, isLoading: messagesLoading } = useSessionMessages(id!);
+  const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
+
+  if (sessionLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="text-destructive">Session not found</div>
+        <Link to="/sessions" className="text-primary hover:underline">
+          Back to sessions
+        </Link>
+      </div>
+    );
+  }
+
+  const handleBookmark = async () => {
+    await toggleBookmark(session.id);
+    queryClient.invalidateQueries({ queryKey: ['session', id] });
+  };
+
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(session.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const isActive = !session.ended_at;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link
+          to="/sessions"
+          className="p-2 hover:bg-muted rounded-lg transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">
+              {session.project_name || '(unknown)'}
+            </h1>
+            <span className={`px-2 py-0.5 text-xs rounded-full ${
+              isActive
+                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                : 'bg-muted text-muted-foreground'
+            }`}>
+              {isActive ? 'Active' : 'Ended'}
+            </span>
+          </div>
+          <p className="text-muted-foreground">{formatDateTime(session.started_at)}</p>
+        </div>
+        <button
+          onClick={handleBookmark}
+          className="p-2 hover:bg-muted rounded-lg transition-colors"
+        >
+          <Star
+            className={`h-6 w-6 ${
+              session.is_bookmarked
+                ? 'text-yellow-500 fill-yellow-500'
+                : 'text-muted-foreground'
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* Session Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Session Info</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <Folder className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">{session.cwd}</span>
+            </div>
+            {session.git_branch && (
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{session.git_branch}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">Session ID:</div>
+            <code className="text-sm bg-muted px-2 py-1 rounded">{session.id}</code>
+            <button
+              onClick={handleCopyId}
+              className="p-1 hover:bg-muted rounded"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+
+          {session.bookmark_note && (
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+              <div className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Bookmark Note</div>
+              <div className="text-sm text-yellow-700 dark:text-yellow-300">{session.bookmark_note}</div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Messages */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            Conversation History {messages && `(${messages.length})`}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {messagesLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+          ) : !messages || messages.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No messages
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-4 p-4 rounded-lg ${
+                    message.type === 'user'
+                      ? 'bg-primary/5'
+                      : 'bg-muted'
+                  }`}
+                >
+                  <div className="flex-shrink-0">
+                    {message.type === 'user' ? (
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-muted-foreground/10 flex items-center justify-center">
+                        <Bot className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">
+                        {message.type === 'user' ? 'User' : 'Claude'}
+                      </span>
+                      {message.model && (
+                        <span className="text-xs text-muted-foreground">
+                          {message.model}
+                        </span>
+                      )}
+                      {(message.input_tokens || message.output_tokens) && (
+                        <span className="text-xs text-muted-foreground">
+                          {formatNumber(message.input_tokens || 0)} / {formatNumber(message.output_tokens || 0)} tokens
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm whitespace-pre-wrap break-words">
+                      {message.content || '(no content)'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

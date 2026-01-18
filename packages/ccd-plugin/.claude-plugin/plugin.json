@@ -1,0 +1,10 @@
+{
+  "name": "ccd",
+  "version": "0.1.0",
+  "description": "Claude Code Daily - Session tracking and analytics plugin",
+  "author": {
+    "name": "tolluset"
+  },
+  "repository": "https://github.com/tolluset/claude-code-daily",
+  "keywords": ["analytics", "session", "tracking", "dashboard"]
+}
