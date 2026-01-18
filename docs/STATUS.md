@@ -30,6 +30,7 @@ ccd/
 | `src/db/queries.ts` | ✅ | CRUD query functions, searchSessions(), cleanEmptySessions() |
 | `src/db/schema.sql` | ✅ | Table schema definition |
 | `src/db/migrations.ts` | ✅ | Database migration system with FTS5 support |
+| `src/services/cost-service.ts` | ✅ | Cost calculation service with model pricing |
 | `src/routes/health.ts` | ✅ | Health check endpoint |
 | `src/routes/sessions.ts` | ✅ | Session CRUD + bookmark |
 | `src/routes/messages.ts` | ✅ | Message save/query |
@@ -73,7 +74,14 @@ ccd/
 | `src/components/ui/SessionBarChart.tsx` | ✅ | Bar chart for session counts |
 | `src/components/ui/ProjectPieChart.tsx` | ✅ | Pie chart for project distribution |
 | `src/components/ui/StreakBadge.tsx` | ✅ | Coding streak tracker badge |
-| `src/components/ui/DiffView.tsx` | ✅ | Code diff visualization component |
+| `src/components/ui/SessionInsights.tsx` | ✅ | Session insights display component |
+| `src/components/MessageContent.tsx` | ✅ | Markdown renderer with code block support |
+| `src/components/CodeBlock.tsx` | ✅ | Code block type detection router |
+| `src/components/SyntaxHighlightedCode.tsx` | ✅ | Syntax highlighting via Shiki |
+| `src/components/ToolResultBlock.tsx` | ✅ | Tool result (Bash/Read) renderer |
+| `src/components/DiffView.tsx` | ✅ | Git diff renderer (@pierre/diffs) |
+| `src/lib/code-block-utils.ts` | ✅ | Code block type detection helpers |
+| `src/lib/shiki-highlighter.ts` | ✅ | Shiki singleton instance manager |
 | `src/pages/Dashboard.tsx` | ✅ | Main dashboard (stats + streak badge) |
 | `src/pages/Sessions.tsx` | ✅ | Session list with filters (date, project) |
 | `src/pages/SessionDetail.tsx` | ✅ | Session detail with delete button |
@@ -145,6 +153,12 @@ ccd/
 ## Development Log
 
 ### 2026-01-19
+- ✅ **Phase 11: Cost Tracking (P11-002, P11-006)** - Claude API usage cost monitoring
+  - Database: model_pricing table, cost columns in messages + daily_stats (006_add_cost_tracking)
+  - Backend: CostService class with model family extraction and cost calculation
+  - Migration: Automatic backfill of existing message costs (write-time calculation strategy)
+  - Frontend: Cost card on Dashboard showing daily input/output costs
+  - Pricing: Opus 4.5 ($15/$75), Sonnet 4.5 ($3/$15), Haiku 3.5 ($0.80/$4.00) per MTok
 - ✅ **Phase 11: Insights Automation (P11-014, P11-015)** - Complete automation workflow
   - Command: /extract-insights slash command for manual extraction
   - Auto-extract: Optional background extraction on session end via Stop hook

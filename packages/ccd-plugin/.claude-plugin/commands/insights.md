@@ -1,5 +1,5 @@
 ---
-name: extract-insights
+name: insights
 description: Extract AI-generated insights from the current session
 ---
 
@@ -14,6 +14,8 @@ You are helping extract insights from a Claude Code session. Follow these steps:
    - This will fetch all messages and metadata for analysis
 
 3. **Analyze the session**:
+   **IMPORTANT**: Detect the primary language used in the session and write insights in that same language.
+
    Extract the following information from the conversation:
 
    - **Summary**: One concise sentence (max 100 chars) describing what was accomplished
@@ -50,3 +52,4 @@ View details: http://localhost:3848/sessions/ses_abc123
 - Avoid generic statements like "learned about coding"
 - Be concise but descriptive
 - If the session was very short or had no meaningful content, explain this to the user
+- **Write insights in the same language as the session conversation**

@@ -21,7 +21,7 @@ export function SearchPage() {
     setBookmarkedOnly(searchParams.get('bookmarked') === 'true');
   }, [searchParams]);
 
-  const { data: results, isLoading, error } = useSearchResults(
+  const { data: results, isLoading } = useSearchResults(
     query,
     searchParams.get('from') || undefined,
     searchParams.get('to') || undefined,

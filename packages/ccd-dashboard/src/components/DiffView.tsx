@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { preloadHighlighter, type ThemeTypes, type BundledTheme, type BundledLanguage } from '@pierre/diffs';
+import { useState, useEffect } from 'react';
+import { preloadHighlighter, type ThemeTypes, type BundledLanguage } from '@pierre/diffs';
 import { PatchDiff } from '@pierre/diffs/react';
 
 export interface DiffViewProps {
@@ -13,13 +13,13 @@ export function DiffView({ content, theme, className, style }: DiffViewProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useState(() => {
+  useEffect(() => {
     let mounted = true;
 
     async function init() {
       try {
         await preloadHighlighter({
-          themes: ['github-light', 'github-dark'] as BundledTheme[],
+          themes: ['github-light', 'github-dark'] as any,
           langs: ['typescript', 'javascript', 'tsx', 'jsx', 'css', 'html', 'json', 'md', 'markdown'] as BundledLanguage[]
         });
 

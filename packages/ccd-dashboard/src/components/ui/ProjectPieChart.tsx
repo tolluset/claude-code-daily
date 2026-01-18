@@ -38,16 +38,16 @@ export function ProjectPieChart({ data, height = 250 }: ProjectPieChartProps) {
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
         <Pie
-          data={data}
+          data={data as any}
           cx="50%"
           cy="50%"
           labelLine={false}
-          label={({ name, percentage }) => `${name} (${percentage.toFixed(0)}%)`}
+          label={({ name, percentage }: any) => `${name} (${percentage.toFixed(0)}%)`}
           outerRadius={80}
           fill="#8884d8"
           dataKey="value"
         >
-          {data.map((entry, index) => (
+          {data.map((_entry, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
@@ -58,9 +58,9 @@ export function ProjectPieChart({ data, height = 250 }: ProjectPieChartProps) {
             borderRadius: '6px',
             fontSize: '12px'
           }}
-          formatter={(value: number, name: string, props: { payload: ProjectData }) => {
+          formatter={(value: number | undefined, _name: string | undefined, props: any) => {
             const percentage = props.payload.percentage;
-            return [`${value} sessions (${percentage.toFixed(1)}%)`, 'Sessions'];
+            return [`${value || 0} sessions (${percentage.toFixed(1)}%)`, 'Sessions'];
           }}
         />
         <Legend

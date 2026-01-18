@@ -40,6 +40,7 @@ A powerful, privacy-first dashboard that automatically captures all your Claude 
 ### 🔧 Core Features
 - **Auto Session Tracking** - Automatic capture via Claude Code hooks
 - **Coding Streak Tracker** - Track your daily coding habits with fire emoji 🔥
+- **Dark Mode** - Toggle between light and dark themes with persistent preference
 - **Bookmark System** - Mark and annotate important sessions
 - **Token Tracking** - Monitor input/output tokens per message
 - **MCP Integration** - Control via natural language (open dashboard, search, stats)
@@ -105,11 +106,11 @@ With MCP configured, ask Claude directly:
 # Inside Claude Code
 /bookmark              # Toggle bookmark on current session
 /bookmark "fix: auth"  # Bookmark with a note
-/extract-insights      # Extract AI insights from current session
+/insights              # Extract AI insights from current session
 ```
 
 **New: AI Session Insights** 🧠
-- Use `/extract-insights` to automatically analyze the current session
+- Use `/insights` to automatically analyze the current session
 - Extracts: Summary, key learnings, problems solved, code patterns, technologies
 - View insights on the Session Detail page
 - Optional: Enable auto-extraction on session end (see Configuration below)
@@ -266,6 +267,7 @@ CCD supports optional configuration via `~/.ccd/config.json`:
 | [TASKS.md](docs/TASKS.md) | Complete task management and progress tracking |
 | [STATUS.md](docs/STATUS.md) | Development status and recent achievements |
 | [SEARCH_IMPLEMENTATION.md](docs/SEARCH_IMPLEMENTATION.md) | Full-text search feature documentation |
+| [DARK_MODE_IMPLEMENTATION.md](docs/DARK_MODE_IMPLEMENTATION_2026-01-19.md) | Dark mode feature implementation details |
 
 ## 🤝 Contributing
 

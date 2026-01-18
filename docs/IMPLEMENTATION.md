@@ -121,6 +121,62 @@ exit 0
 
 ---
 
+## Cost Tracking
+
+### Model Pricing System
+
+**Database**: `model_pricing` table stores pricing for Claude model families:
+
+| Model Family | Input ($/MTok) | Output ($/MTok) | Notes |
+|--------------|----------------|-----------------|-------|
+| opus-4-5 | $15.00 | $75.00 | Claude Opus 4.5 |
+| sonnet-4-5 | $3.00 | $15.00 | Claude Sonnet 4.5 |
+| haiku-3-5 | $0.80 | $4.00 | Claude Haiku 3.5 |
+
+### Cost Calculation Strategy
+
+**Write-Time Calculation**: Costs are calculated when messages are created (not on-demand).
+
+**Benefits**:
+- Historical accuracy: Future price changes don't affect past data
+- Performance: No repeated calculations
+- Simplicity: Cost is stored alongside token counts
+
+**Implementation**:
+
+1. **CostService** (`packages/ccd-server/src/services/cost-service.ts`)
+   - `extractModelFamily()`: Extracts family from full model name (e.g., "claude-opus-4-5-20251101" → "opus-4-5")
+   - `getModelPricing()`: Retrieves pricing from database
+   - `calculateCost()`: Computes input/output/total costs with 5 decimal precision
+
+2. **Database Schema** (Migration 006)
+   - `messages.input_cost`: Input token cost
+   - `messages.output_cost`: Output token cost
+   - `messages.is_estimated_cost`: Flag for backfilled costs
+   - `daily_stats.total_input_cost`: Daily aggregated input cost
+   - `daily_stats.total_output_cost`: Daily aggregated output cost
+
+3. **Query Integration** (`packages/ccd-server/src/db/queries.ts`)
+   - `createMessage()`: Calculates and stores cost on message creation
+   - `updateDailyStats()`: Accumulates costs in daily aggregates
+
+4. **Frontend Display** (`packages/ccd-dashboard/src/pages/Dashboard.tsx`)
+   - Cost card shows total daily cost: `$X.XX`
+   - Breakdown: `In $X.XXX / Out $X.XXX`
+   - 5-column grid layout on desktop
+
+### Migration Behavior
+
+When Migration 006 runs:
+1. Creates `model_pricing` table with current rates
+2. Adds cost columns to `messages` and `daily_stats`
+3. **Backfills all existing messages** with estimated costs (marked with `is_estimated_cost = true`)
+4. **Recalculates daily_stats costs** for all historical dates
+
+**Note**: Backfilled costs use current pricing and may not reflect historical rates.
+
+---
+
 ## MCP Tools
 
 | Tool | Description | Parameters |
@@ -153,6 +209,58 @@ Ask Claude directly:
 - `SessionList`: Session list table
 - `SessionDetail`: Conversation timeline
 - `BookmarkBadge`: Bookmark display/toggle
+
+### MessageContent Pipeline
+
+**Purpose**: Render message content with proper formatting, syntax highlighting, and code block support
+
+**Architecture**:
+```
+MessageContent (react-markdown)
+  └─> CodeBlock (type detection router)
+       ├─> Inline code → <code> tag with muted background
+       ├─> Diff blocks → DiffView (@pierre/diffs)
+       ├─> Tool results → ToolResultBlock (Bash/Read output)
+       └─> General code → SyntaxHighlightedCode (Shiki)
+```
+
+**Components**:
+
+1. **MessageContent** (`src/components/MessageContent.tsx`)
+   - Parses markdown with `react-markdown`, `remark-gfm`, `remark-breaks`
+   - Injects custom `CodeBlock` component
+   - XSS protection: disables `<script>` and `<iframe>` tags
+
+2. **CodeBlock** (`src/components/CodeBlock.tsx`)
+   - Routes code blocks to appropriate renderer based on content type
+   - Type detection via `code-block-utils.ts` helpers
+
+3. **SyntaxHighlightedCode** (`src/components/SyntaxHighlightedCode.tsx`)
+   - Syntax highlighting via Shiki (singleton pattern)
+   - Auto theme switching (light/dark)
+   - Copy-to-clipboard button
+   - Language label in header
+   - Supports: TypeScript, JavaScript, Python, JSON, Bash, etc.
+
+4. **ToolResultBlock** (`src/components/ToolResultBlock.tsx`)
+   - Specialized rendering for tool execution results
+   - Blue accent border for visual distinction
+   - Icons: Terminal (Bash), FileText (Read)
+   - Copy-to-clipboard support
+
+5. **DiffView** (`src/components/DiffView.tsx`)
+   - Git diff rendering via @pierre/diffs
+   - Unified diff style with line numbers
+
+**Type Detection Logic**:
+- **Diff**: Regex `/^(diff |@@|---|\+\+\+)/m`
+- **Tool Result**: Language `bash`/`shell` or line number pattern `/^\s*\d+→/`
+- **General**: Fallback to Shiki syntax highlighting
+
+**Singleton Pattern** (`src/lib/shiki-highlighter.ts`):
+- Single Shiki instance shared across all code blocks
+- Lazy initialization on first use
+- Prevents redundant highlighter creation (~100-200ms init time)
 
 ---
 

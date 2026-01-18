@@ -6,6 +6,13 @@
 ## Development Log
 
 ### 2026-01-19
+- **Phase 11**: Cost Tracking feature complete ✅
+  - P11-002: Cost calculation system with model pricing table
+  - P11-006: Cost Dashboard cards showing input/output costs
+  - Migration 006: Added cost columns to messages and daily_stats
+  - CostService: Model family extraction and cost calculation
+  - Dashboard: New 5-column grid with Cost card
+  - Write-time cost calculation for accurate historical data
 - **Phase 11**: AI Session Insights - Full automation ✅
   - P11-011: MCP tools (get_session_content, save_session_insights)
   - P11-012: SessionInsights UI component with edit/delete
@@ -299,7 +306,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | ID | Task | Priority | Status | Dependencies | Notes |
 |----|------|----------|--------|--------------|-------|
 | P11-001 | Coding Streak Tracker | P1 | ✅ | None | getStreakStats() + GET /stats/streak |
-| P11-002 | Cost Tracking & Budget Alerts | P1 | ⬜ | None | Model pricing table + cost calculation |
+| P11-002 | Cost Tracking & Budget Alerts | P1 | ✅ | None | Model pricing table + cost calculation |
 | P11-003 | Session Tags system | P2 | ⬜ | None | Manual + auto-detection tags |
 | P11-004 | Token Efficiency Analysis | P2 | ⬜ | None | Identify inefficient sessions |
 
@@ -308,7 +315,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | ID | Task | Priority | Status | Dependencies | Notes |
 |----|------|----------|--------|--------------|-------|
 | P11-005 | Streak Badge component | P1 | ✅ | P11-001 | StreakBadge on Dashboard header |
-| P11-006 | Cost Dashboard cards | P1 | ⬜ | P11-002 | Daily/monthly cost display |
+| P11-006 | Cost Dashboard cards | P1 | ✅ | P11-002 | Daily/monthly cost display |
 | P11-007 | Heatmap Calendar | P2 | ⬜ | None | GitHub-style activity calendar |
 | P11-008 | Tags UI (add/remove/filter) | P2 | ⬜ | P11-003 | Session tagging interface |
 | P11-012 | Insights UI (view/edit) | P1 | ✅ | P11-011 | SessionInsights component + SessionDetail integration |
@@ -354,7 +361,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | Phase 8: Quality & Testing | 🚧 In Progress | 2/3 (67%) |
 | Phase 9: Advanced Features | ⬜ Backlog | 0/5 (0%) |
 | Phase 10: Full-Text Search | ✅ Complete | 7/7 (100%) |
-| Phase 11: Productivity Insights | 🚧 In Progress | 7/15 (47%) |
+| Phase 11: Productivity Insights | 🚧 In Progress | 9/15 (60%) |
 
 ### By Priority
 

@@ -27,13 +27,13 @@ if ! command -v claude &> /dev/null; then
 fi
 
 # Prepare the prompt for Claude
-PROMPT="Analyze session $SESSION_ID and extract insights. Use the get_session_content MCP tool to retrieve the session data, then analyze it and save insights using the save_session_insights MCP tool. Be concise and focus on key learnings, problems solved, and technologies used."
+PROMPT="Analyze session $SESSION_ID and extract insights. Use the get_session_content MCP tool to retrieve the session data, then analyze it and save insights using the save_session_insights MCP tool. Be concise and focus on key learnings, problems solved, and technologies used. IMPORTANT: Write all insights in the same language as the session conversation."
 
 echo "[$(date)] Executing Claude command with prompt" >> "$LOG_FILE"
 
 # Execute Claude command in the background
-# Using --non-interactive mode to avoid user prompts
-claude --non-interactive "$PROMPT" >> "$LOG_FILE" 2>&1 &
+# Pass prompt via stdin to avoid interactive mode
+echo "$PROMPT" | claude >> "$LOG_FILE" 2>&1 &
 
 CLAUDE_PID=$!
 echo "[$(date)] Claude process started with PID: $CLAUDE_PID" >> "$LOG_FILE"

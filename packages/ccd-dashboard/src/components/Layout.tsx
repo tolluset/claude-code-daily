@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, BarChart3, Search } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, BarChart3, Search, Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTheme } from './ThemeProvider';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -11,6 +12,7 @@ const navigation = [
 
 export function Layout() {
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,6 +43,19 @@ export function Layout() {
               );
             })}
           </nav>
+          <div className="ml-auto flex items-center">
+            <button
+              onClick={toggleTheme}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 w-9"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? (
+                <Moon className="h-4 w-4" />
+              ) : (
+                <Sun className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </div>
       </header>
 

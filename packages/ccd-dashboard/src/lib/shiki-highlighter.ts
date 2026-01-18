@@ -82,7 +82,7 @@ export function preloadShikiHighlighter(): void {
  */
 export function normalizeLanguage(lang: string | undefined): BundledLanguage {
   if (!lang) {
-    return 'plaintext';
+    return 'text' as BundledLanguage;
   }
 
   const normalized = lang.toLowerCase().trim();
@@ -108,8 +108,8 @@ export function normalizeLanguage(lang: string | undefined): BundledLanguage {
     return normalized as BundledLanguage;
   }
 
-  // Fallback to plaintext
-  return 'plaintext';
+  // Fallback to text
+  return 'text' as BundledLanguage;
 }
 
 /**

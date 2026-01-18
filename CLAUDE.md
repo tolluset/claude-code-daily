@@ -24,6 +24,9 @@ Task management. Complete task list organized by phase with priority, status, de
 ### docs/DEVELOPMENT_GUIDELINES.md
 Development guidelines and best practices. React Query cache invalidation rules, testing guidelines, common pitfalls to avoid.
 
+### docs/DARK_MODE_IMPLEMENTATION_2026-01-19.md
+Dark mode implementation. ThemeProvider context, code block synchronization, localStorage persistence, testing guidelines.
+
 ---
 
 Update as needed:
