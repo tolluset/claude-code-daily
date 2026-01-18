@@ -302,6 +302,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 |----|------|----------|--------|--------------|-------|
 | P11-009 | get_streak MCP tool | P2 | ⬜ | P11-001 | Ask Claude for streak |
 | P11-010 | Budget settings UI | P2 | ⬜ | P11-002 | Configure budget limit |
+| P11-011 | AI Session Insights (MCP) | P1 | ✅ | None | get_session_content + save_session_insights |
 
 ---
 
@@ -333,17 +334,17 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 | Phase 8: Quality & Testing | 🚧 In Progress | 2/3 (67%) |
 | Phase 9: Advanced Features | ⬜ Backlog | 0/5 (0%) |
 | Phase 10: Full-Text Search | ✅ Complete | 7/7 (100%) |
-| Phase 11: Productivity Insights | 🚧 In Progress | 2/10 (20%) |
+| Phase 11: Productivity Insights | 🚧 In Progress | 3/11 (27%) |
 
 ### By Priority
 
 | Priority | Total | Completed | In Progress | Todo |
 |----------|-------|-----------|-------------|------|
 | P0 (Critical) | 18 | 12 | 0 | 6 |
-| P1 (High) | 23 | 20 | 0 | 3 |
+| P1 (High) | 24 | 21 | 0 | 3 |
 | P2 (Medium) | 13 | 1 | 0 | 12 |
 | P3 (Low) | 4 | 0 | 0 | 4 |
-| **Total** | **58** | **33** | **0** | **25** |
+| **Total** | **59** | **34** | **0** | **25** |
 
 ---
 

@@ -278,6 +278,184 @@ ${r.snippet.replace(/<[^>]*>/g, '')}
   }
 );
 
+// Tool: get_session_content - Get full session content for analysis
+server.tool(
+  "get_session_content",
+  "Retrieves complete session content including all messages and metadata. Use this to analyze a session before extracting insights.",
+  {
+    session_id: z
+      .string()
+      .describe("Session ID to retrieve. Can be obtained from search or current session."),
+  },
+  async ({ session_id }) => {
+    try {
+      const isServerUp = await checkServerHealth();
+      if (!isServerUp) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "CCD server is not running",
+            },
+          ],
+        };
+      }
+
+      // Get session info
+      const sessionRes = await fetch(
+        `${SERVER_URL}/api/v1/sessions/${session_id}`
+      );
+      if (!sessionRes.ok) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Session not found: ${session_id}`,
+            },
+          ],
+        };
+      }
+
+      const sessionData = await sessionRes.json();
+      const session = sessionData.data;
+
+      // Get messages
+      const messagesRes = await fetch(
+        `${SERVER_URL}/api/v1/sessions/${session_id}/messages`
+      );
+      const messagesData = await messagesRes.json();
+      const messages = messagesData.data || [];
+
+      // Format for Claude analysis
+      const formatted = `
+SESSION: ${session.id}
+PROJECT: ${session.project_name || 'Unknown'}
+STARTED: ${session.started_at}
+SUMMARY: ${session.summary || 'No summary'}
+
+MESSAGES (${messages.length} total):
+${messages
+  .map(
+    (m: any, i: number) =>
+      `
+--- Message ${i + 1} (${m.type}) ---
+${m.content || '(empty)'}
+${m.model ? `Model: ${m.model}` : ''}
+${m.input_tokens ? `Tokens: ${m.input_tokens} in, ${m.output_tokens} out` : ''}
+`
+  )
+  .join('\n')}
+`.trim();
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: formatted,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Failed to get session content: ${error}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Tool: save_session_insights - Save AI-extracted insights
+server.tool(
+  "save_session_insights",
+  "Saves extracted insights for a session. After analyzing session content with get_session_content, use this to store the insights.",
+  {
+    session_id: z.string().describe("Session ID"),
+    summary: z.string().optional().describe("One-sentence summary of the session"),
+    key_learnings: z
+      .array(z.string())
+      .optional()
+      .describe("Key learnings from this session (max 3)"),
+    problems_solved: z
+      .array(z.string())
+      .optional()
+      .describe("Problems that were solved (max 3)"),
+    code_patterns: z
+      .array(z.string())
+      .optional()
+      .describe("Code patterns or techniques used (max 3)"),
+    technologies: z
+      .array(z.string())
+      .optional()
+      .describe("Technologies mentioned or used"),
+    difficulty: z
+      .enum(["easy", "medium", "hard"])
+      .optional()
+      .describe("Difficulty level of this session"),
+  },
+  async (args) => {
+    try {
+      const isServerUp = await checkServerHealth();
+      if (!isServerUp) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "CCD server is not running",
+            },
+          ],
+        };
+      }
+
+      // Save insights via API
+      const response = await fetch(`${SERVER_URL}/api/v1/insights`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(args),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Failed to save insights: ${error}`,
+            },
+          ],
+        };
+      }
+
+      const data = await response.json();
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `✅ Insights saved for session ${args.session_id}
+
+View at: http://localhost:${DASHBOARD_PORT}/sessions/${args.session_id}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Failed to save insights: ${error}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 // Start server
 async function main() {
   const transport = new StdioServerTransport();

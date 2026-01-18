@@ -492,3 +492,103 @@ function daysDifference(date1: string, date2: string): number {
   const d2 = new Date(date2 + 'T00:00:00');
   return Math.abs(Math.floor((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24)));
 }
+
+// Session Insights functions
+export interface SessionInsight {
+  id: number;
+  session_id: string;
+  summary: string | null;
+  key_learnings: string | null;  // JSON array
+  problems_solved: string | null; // JSON array
+  code_patterns: string | null;  // JSON array
+  technologies: string | null;   // JSON array
+  difficulty: 'easy' | 'medium' | 'hard' | null;
+  generated_at: string;
+  user_notes: string | null;
+}
+
+export interface CreateInsightRequest {
+  session_id: string;
+  summary?: string;
+  key_learnings?: string[];
+  problems_solved?: string[];
+  code_patterns?: string[];
+  technologies?: string[];
+  difficulty?: 'easy' | 'medium' | 'hard';
+  user_notes?: string;
+}
+
+export function getSessionInsight(sessionId: string): SessionInsight | null {
+  const stmt = db.prepare(`
+    SELECT * FROM session_insights
+    WHERE session_id = ?
+  `);
+
+  return stmt.get(sessionId) as SessionInsight | null;
+}
+
+export function createOrUpdateInsight(data: CreateInsightRequest): SessionInsight {
+  // Convert arrays to JSON strings
+  const key_learnings = data.key_learnings ? JSON.stringify(data.key_learnings) : null;
+  const problems_solved = data.problems_solved ? JSON.stringify(data.problems_solved) : null;
+  const code_patterns = data.code_patterns ? JSON.stringify(data.code_patterns) : null;
+  const technologies = data.technologies ? JSON.stringify(data.technologies) : null;
+
+  const stmt = db.prepare(`
+    INSERT INTO session_insights (
+      session_id, summary, key_learnings, problems_solved,
+      code_patterns, technologies, difficulty, user_notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(session_id) DO UPDATE SET
+      summary = excluded.summary,
+      key_learnings = excluded.key_learnings,
+      problems_solved = excluded.problems_solved,
+      code_patterns = excluded.code_patterns,
+      technologies = excluded.technologies,
+      difficulty = excluded.difficulty,
+      user_notes = excluded.user_notes,
+      generated_at = CURRENT_TIMESTAMP
+  `);
+
+  stmt.run(
+    data.session_id,
+    data.summary || null,
+    key_learnings,
+    problems_solved,
+    code_patterns,
+    technologies,
+    data.difficulty || null,
+    data.user_notes || null
+  );
+
+  return getSessionInsight(data.session_id)!;
+}
+
+export function updateInsightNotes(sessionId: string, notes: string): void {
+  const stmt = db.prepare(`
+    UPDATE session_insights
+    SET user_notes = ?
+    WHERE session_id = ?
+  `);
+
+  stmt.run(notes, sessionId);
+}
+
+export function deleteSessionInsight(sessionId: string): void {
+  const stmt = db.prepare(`
+    DELETE FROM session_insights
+    WHERE session_id = ?
+  `);
+
+  stmt.run(sessionId);
+}
+
+export function getRecentInsights(limit: number = 10): SessionInsight[] {
+  const stmt = db.prepare(`
+    SELECT * FROM session_insights
+    ORDER BY generated_at DESC
+    LIMIT ?
+  `);
+
+  return stmt.all(limit) as SessionInsight[];
+}

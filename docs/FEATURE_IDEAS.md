@@ -15,13 +15,14 @@ This document outlines proposed features for future development of CCD, organize
 
 **Estimated Effort**: 2-3 weeks
 
-### P11-001: Coding Streak Tracker ⭐
+### P11-001: Coding Streak Tracker ⭐ ✅ Implemented
 
 **Description**: GitHub-style streak tracking to motivate consistent coding habits
 
 **Value**: High (motivation, habit formation)
 **Complexity**: Low
 **Dependencies**: None (uses existing `daily_stats`)
+**Status**: ✅ Complete (2026-01-19)
 
 **Implementation**:
 ```typescript
@@ -46,6 +47,73 @@ interface StreakStats {
 - Dashboard header: Badge with current streak (🔥 5 days)
 - Hover tooltip: Longest streak, total active days
 - Reports page: Streak history chart
+
+---
+
+### P11-011: AI Session Insights via MCP ⭐ ✅ Implemented
+
+**Description**: Automatically extract insights from sessions using Claude Code's built-in Claude instance
+
+**Value**: High (learning, knowledge retention, pattern recognition)
+**Complexity**: Medium
+**Dependencies**: None
+**Status**: ✅ Complete (2026-01-19)
+
+**Implementation**:
+```typescript
+interface SessionInsight {
+  session_id: string;
+  summary: string;               // One-sentence summary
+  key_learnings: string[];       // Max 3 learnings
+  problems_solved: string[];     // Max 3 problems
+  code_patterns: string[];       // Max 3 patterns
+  technologies: string[];        // Technologies used
+  difficulty: 'easy' | 'medium' | 'hard';
+  user_notes: string;            // User-editable notes
+}
+```
+
+**Database**:
+```sql
+CREATE TABLE session_insights (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL UNIQUE,
+  summary TEXT,
+  key_learnings TEXT,      -- JSON array
+  problems_solved TEXT,     -- JSON array
+  code_patterns TEXT,       -- JSON array
+  technologies TEXT,        -- JSON array
+  difficulty TEXT CHECK(difficulty IN ('easy', 'medium', 'hard')),
+  generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  user_notes TEXT
+);
+
+CREATE VIRTUAL TABLE insights_fts USING fts5(...);
+```
+
+**MCP Tools**:
+- `get_session_content` - Retrieves full session content formatted for Claude analysis
+- `save_session_insights` - Saves Claude's extracted insights with structured schema
+
+**Workflow**:
+1. User asks Claude: "Analyze session abc123 and extract insights"
+2. Claude calls `get_session_content(session_id='abc123')`
+3. Claude analyzes the content and identifies patterns, learnings, technologies
+4. Claude calls `save_session_insights(...)` with structured data
+5. Insights are stored in database with FTS5 for searchability
+
+**Key Features**:
+- No external API needed - uses Claude Code's built-in instance
+- Structured extraction: summary, learnings, problems, patterns, tech stack
+- Full-text searchable insights
+- User-editable notes field
+- Difficulty tagging for learning progression
+
+**Future Enhancements** (not yet implemented):
+- Frontend UI for viewing/editing insights
+- Automatic insight generation on session end
+- Insight dashboard and analytics
+- Slash command wrapper for easier access
 
 ---
 

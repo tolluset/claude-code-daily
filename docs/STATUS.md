@@ -36,6 +36,8 @@ ccd/
 | `src/routes/stats.ts` | ✅ | Statistics query (today + daily) |
 | `src/routes/sync.ts` | ✅ | Transcript parsing and sync, empty session deletion |
 | `src/routes/search.ts` | ✅ | Full-text search endpoint |
+| `src/routes/insights.ts` | ✅ | Session insights CRUD endpoints |
+| `src/db/migrations/005_add_insights.sql` | ✅ | Insights table + FTS5 integration |
 | `src/routes/__tests__/*.test.ts` | ✅ | Unit & integration tests (29 tests) |
 | `src/utils/pid.ts` | ✅ | PID file management |
 | `src/utils/timeout.ts` | ✅ | Idle timeout (1 hour) |
@@ -111,6 +113,11 @@ ccd/
 | GET | /api/v1/stats/streak | ✅ |
 | POST | /api/v1/sync/transcript | ✅ |
 | GET | /api/v1/search | ✅ |
+| GET | /api/v1/insights/:sessionId | ✅ |
+| POST | /api/v1/insights | ✅ |
+| PATCH | /api/v1/insights/:sessionId/notes | ✅ |
+| DELETE | /api/v1/insights/:sessionId | ✅ |
+| GET | /api/v1/insights/recent/:limit? | ✅ |
 
 ---
 
@@ -121,6 +128,8 @@ ccd/
 | open_dashboard | ✅ | Opens dashboard in browser |
 | get_stats | ✅ | Returns session statistics by period |
 | search_sessions | ✅ | Full-text search across sessions and messages |
+| get_session_content | ✅ | Retrieves full session content for AI analysis |
+| save_session_insights | ✅ | Saves AI-extracted insights to database |
 
 ---
 
@@ -136,6 +145,32 @@ ccd/
 ## Development Log
 
 ### 2026-01-19
+- ✅ **Phase 11: AI Session Insights (MCP)** - Automated insight extraction
+  - Database: session_insights table with FTS5 integration (005_add_insights)
+  - Backend: CRUD functions for insights management (getSessionInsight, createOrUpdateInsight, etc.)
+  - API: 5 new endpoints for insights (GET/POST/PATCH/DELETE)
+  - MCP Tools: get_session_content + save_session_insights
+  - Workflow: Claude analyzes sessions and saves structured insights (summary, learnings, patterns, tech stack)
+  - No external API needed - uses Claude Code's built-in Claude instance
+- ✅ **Phase 11: Coding Streak Tracker** - Motivation and habit tracking
+  - Backend: getStreakStats() function using existing daily_stats
+  - API: GET /api/v1/stats/streak endpoint
+  - Frontend: StreakBadge component with 🔥 emoji and hover tooltip
+  - Features: Current streak, longest streak, total active days, streak start date
+- ✅ **Bug Fix: Search Results Display** - Fixed type wrapping issue in API hooks
+  - Fixed `useSearchResults` hook: Changed `fetchApi<ApiResponse<SearchResult[]>>` to `fetchApi<SearchResult[]>`
+  - Fixed `useDailyStats` hook: Changed `fetchApi<ApiResponse<DailyStats[]>>` to `fetchApi<DailyStats[]>`
+  - Fixed `useStreakStats` hook: Changed `fetchApi<ApiResponse<StreakStats>>` to `fetchApi<StreakStats>`
+  - Added `StreakStats` import to api.ts
+  - Added comprehensive JSDoc documentation to `fetchApi` function explaining correct usage
+  - Cleaned up debug logs (now only in dev mode)
+  - Root cause: `fetchApi<T>` already unwraps `ApiResponse<T>` and returns `T`, so double wrapping caused `undefined` access
+- ✅ **UX Improvements: Search Page** - Enhanced search experience
+  - Added "No results found" message when search returns empty results
+  - Fixed back button behavior: Now uses `{ replace: true }` to prevent search history stacking
+  - Before: Home → Search(q1) → Search(q2) → Back → Search(q1) (confusing)
+  - After: Home → Search(q1) → Search(q2) → Back → Home (expected)
+  - Removed debug console logs from Search.tsx
 - ✅ **Phase 10: Full-Text Search** - Complete search feature with FTS5
   - Database: FTS5 migration (003_add_fts_search)
   - Backend: searchSessions() with BM25 ranking

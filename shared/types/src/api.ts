@@ -14,6 +14,26 @@ export const API_BASE = 'http://localhost:3847/api/v1';
  * @returns Parsed response data
  * @throws Error if request fails or API returns error
  */
+/**
+ * Fetches data from the API with standardized error handling.
+ *
+ * IMPORTANT: This function unwraps ApiResponse<T> and returns only the data (T).
+ *
+ * @example
+ * // Correct: fetchApi<ActualDataType>()
+ * const sessions = await fetchApi<Session[]>('/sessions');
+ *
+ * // Incorrect: fetchApi<ApiResponse<ActualDataType>>()
+ * const response = await fetchApi<ApiResponse<Session[]>>('/sessions');
+ * // This will cause type mismatch! response is already Session[], not ApiResponse<Session[]>
+ *
+ * @template T - The type of the data field in the API response
+ * @param endpoint - API endpoint path (e.g., '/sessions')
+ * @param options - Optional fetch RequestInit options
+ * @param baseUrl - Base URL for the API (defaults to API_BASE)
+ * @returns Promise resolving to the unwrapped data (T), not ApiResponse<T>
+ */
+
 export async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit,
