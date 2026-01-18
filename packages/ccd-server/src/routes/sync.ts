@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { readFileSync, existsSync } from 'fs';
-import { bulkInsertMessages, getSession } from '../db/queries';
+import { bulkInsertMessages, getSession, updateSessionSummary, deleteSession, decrementSessionCount } from '../db/queries';
 import { validateRequired } from '../utils/validation';
 import type {
   ApiResponse,
@@ -8,7 +8,7 @@ import type {
   TranscriptMessage,
   TranscriptContentBlock,
   CreateMessageRequest
-} from '@ccd/types';
+} from './types';
 
 const sync = new Hono();
 
@@ -42,7 +42,7 @@ function parseTranscript(filePath: string): TranscriptMessage[] {
     if (!line.trim()) continue;
     try {
       const msg = JSON.parse(line) as TranscriptMessage;
-      if (msg.type === 'human' || msg.type === 'assistant') {
+      if (msg.type === 'user' || msg.type === 'assistant') {
         messages.push(msg);
       }
     } catch {
@@ -76,17 +76,47 @@ sync.post('/transcript', async (c) => {
 
     const transcriptMessages = parseTranscript(body.transcript_path);
 
-    const messagesToInsert: CreateMessageRequest[] = transcriptMessages.map((msg) => ({
-      session_id: body.session_id,
-      uuid: msg.uuid,
-      type: msg.type === 'human' ? 'user' : 'assistant',
-      content: extractTextFromContent(msg.message.content),
-      model: msg.message.model,
-      input_tokens: msg.message.usage?.input_tokens,
-      output_tokens: msg.message.usage?.output_tokens
-    }));
+    // Count user messages
+    const userMessageCount = transcriptMessages.filter(msg => msg.type === 'user').length;
+
+    // If no user messages, delete the session and decrement stats
+    if (userMessageCount === 0) {
+      const sessionDate = session.started_at.split(' ')[0]; // Extract "YYYY-MM-DD"
+
+      deleteSession(body.session_id);
+      decrementSessionCount(sessionDate);
+
+      return c.json<ApiResponse<{ deleted: boolean; reason: string }>>({
+        success: true,
+        data: {
+          deleted: true,
+          reason: 'no_user_messages'
+        }
+      });
+    }
+
+    // Filter out messages with empty content (e.g., tool_use only, thinking blocks)
+    const messagesToInsert: CreateMessageRequest[] = transcriptMessages
+      .map((msg) => ({
+        session_id: body.session_id,
+        uuid: msg.uuid,
+        type: msg.type === 'user' ? 'user' : 'assistant',
+        content: extractTextFromContent(msg.message.content),
+        model: msg.message.model,
+        input_tokens: msg.message.usage?.input_tokens,
+        output_tokens: msg.message.usage?.output_tokens
+      }))
+      .filter((msg) => msg.content.trim() !== '');
 
     const inserted = bulkInsertMessages(messagesToInsert);
+
+    // Extract first user message as session summary (truncate to 100 chars)
+    const firstUserMessage = transcriptMessages.find((msg) => msg.type === 'user');
+    if (firstUserMessage && !session.summary) {
+      const content = extractTextFromContent(firstUserMessage.message.content);
+      const summary = content.length > 100 ? content.slice(0, 97) + '...' : content;
+      updateSessionSummary(body.session_id, summary);
+    }
 
     return c.json<ApiResponse<{ inserted: number; total: number }>>({
       success: true,

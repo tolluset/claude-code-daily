@@ -1,21 +1,17 @@
-# Claude Code Daily (CCD) - Development Status
+# Claude Code Daily (CCD) - Status
 
 > Last Updated: 2026-01-19
 
-## Current Version: 1.0.0 (MVP)
-
 ---
 
-## Implementation Status
-
-### Package Structure
+## Package Structure
 
 ```
 ccd/
 ├── packages/
 │   ├── ccd-server/      ✅ Complete
-│   ├── ccd-cli/         ✅ Complete
-│   ├── ccd-dashboard/   ✅ Complete (Basic)
+│   ├── ccd-mcp/         ✅ Complete
+│   ├── ccd-dashboard/   ✅ Complete (MVP)
 │   └── ccd-plugin/      ✅ Complete
 └── shared/
     └── types/           ✅ Complete
@@ -23,9 +19,9 @@ ccd/
 
 ---
 
-## Detailed Status by Component
+## File-by-File Status
 
-### 1. CCD Server (packages/ccd-server)
+### CCD Server (packages/ccd-server)
 
 | File | Status | Description |
 |------|--------|-------------|
@@ -43,20 +39,7 @@ ccd/
 | `src/utils/params.ts` | ✅ | Query parameter parsing |
 | `src/utils/validation.ts` | ✅ | Input validation utils |
 
-**API Endpoints:**
-- ✅ `GET /api/v1/health`
-- ✅ `POST /api/v1/sessions`
-- ✅ `GET /api/v1/sessions`
-- ✅ `GET /api/v1/sessions/:id`
-- ✅ `POST /api/v1/sessions/:id/bookmark`
-- ✅ `POST /api/v1/messages`
-- ✅ `GET /api/v1/sessions/:id/messages`
-- ✅ `GET /api/v1/stats/today`
-- ✅ `POST /api/v1/sync/transcript`
-
----
-
-### 2. CCD Plugin (packages/ccd-plugin)
+### CCD Plugin (packages/ccd-plugin)
 
 | File | Status | Description |
 |------|--------|-------------|
@@ -66,34 +49,10 @@ ccd/
 | `hooks/scripts/user-prompt-submit.sh` | ✅ | Save user prompt |
 | `hooks/scripts/stop.sh` | ✅ | Transcript parsing and sync |
 | `commands/bookmark.md` | ✅ | /bookmark command |
+| `.mcp.json` | ✅ | MCP configuration |
+| `mcp/server.ts` | ✅ | MCP server for plugin bundle |
 
-**Hooks:**
-- ✅ SessionStart → Server check/start + session registration
-- ✅ UserPromptSubmit → Save user prompt
-- ✅ Stop → Transcript parsing and bulk save
-- ⬜ SessionEnd → (unused, replaced by Stop)
-
----
-
-### 3. CCD CLI (packages/ccd-cli)
-
-| File | Status | Description |
-|------|--------|-------------|
-| `src/index.ts` | ✅ | CLI entry point (Commander.js) |
-| `src/api.ts` | ✅ | API client |
-| `src/start-server.ts` | ✅ | Server auto-start logic |
-| `src/commands/dashboard.ts` | ✅ | Open dashboard (default command) |
-| `src/commands/list.ts` | ✅ | Today's session list |
-| `src/commands/report.ts` | ✅ | Today's statistics report |
-
-**Commands:**
-- ✅ `ccd` → Open dashboard
-- ✅ `ccd list` → Today's session list (bookmarked first)
-- ✅ `ccd report` → Today's stats
-
----
-
-### 4. CCD Dashboard (packages/ccd-dashboard)
+### CCD Dashboard (packages/ccd-dashboard)
 
 | File | Status | Description |
 |------|--------|-------------|
@@ -103,36 +62,51 @@ ccd/
 | `src/lib/utils.ts` | ✅ | Utility functions |
 | `src/components/Layout.tsx` | ✅ | Common layout |
 | `src/components/ui/Card.tsx` | ✅ | Card component |
+| `src/components/ui/IconButton.tsx` | ✅ | Icon button component with variants |
 | `src/pages/Dashboard.tsx` | ✅ | Main dashboard (stats + recent sessions) |
 | `src/pages/Sessions.tsx` | ✅ | Session list page |
 | `src/pages/SessionDetail.tsx` | ✅ | Session detail page |
 
-**Pages:**
-- ✅ `/` → Stats cards + recent 5 sessions
-- ✅ `/sessions` → Full session list + bookmark filter
-- ✅ `/sessions/:id` → Session detail + conversation history
+### CCD MCP (packages/ccd-mcp)
 
-**Pending:**
-- ⬜ Statistics charts (daily/weekly trends)
-- ⬜ Project-based filter
-- ⬜ Date range picker
+| File | Status | Description |
+|------|--------|-------------|
+| `src/index.ts` | ✅ | MCP server with tools |
+| `package.json` | ✅ | Dependencies (@modelcontextprotocol/sdk, zod) |
 
----
-
-### 5. Shared Types (shared/types)
+### Shared Types (shared/types)
 
 | File | Status | Description |
 |------|--------|-------------|
 | `src/index.ts` | ✅ | Common type definitions |
 | `src/api.ts` | ✅ | API utilities (fetchApi, checkServerHealth) |
 
-**Types:**
-- ✅ Session, CreateSessionRequest
-- ✅ Message, CreateMessageRequest
-- ✅ DailyStats
-- ✅ ApiResponse, HealthResponse
-- ✅ TranscriptMessage, TranscriptContentBlock
-- ✅ HookContext
+---
+
+## API Endpoints
+
+| Method | Endpoint | Status |
+|--------|----------|--------|
+| GET | /api/v1/health | ✅ |
+| POST | /api/v1/sessions | ✅ |
+| GET | /api/v1/sessions | ✅ |
+| GET | /api/v1/sessions/:id | ✅ |
+| POST | /api/v1/sessions/:id/bookmark | ✅ |
+| DELETE | /api/v1/sessions/:id | ✅ |
+| POST | /api/v1/messages | ✅ |
+| GET | /api/v1/sessions/:id/messages | ✅ |
+| GET | /api/v1/stats/today | ✅ |
+| POST | /api/v1/sync/transcript | ✅ |
+| GET | /api/v1/stats/daily | ⬜ Phase 2 |
+
+---
+
+## MCP Tools
+
+| Tool | Status | Description |
+|------|--------|-------------|
+| open_dashboard | ✅ | Opens dashboard in browser |
+| get_stats | ✅ | Returns session statistics by period |
 
 ---
 
@@ -148,34 +122,24 @@ ccd/
 ## Development Log
 
 ### 2026-01-19
-- ✅ Documentation update (PLAN.md checkboxes, FEATURES.md future features)
-- ✅ Created PRD.md
-- ✅ Created STATUS.md
-- ✅ Added document summaries to CLAUDE.md
-- ✅ Improved README.md
-- ✅ Converted all docs to English
+- ✅ MCP server implementation (`open_dashboard`, `get_stats`)
+- ✅ Session summary feature (first user message extraction)
+- ✅ Phase 2 planning (gap analysis, implementation plan)
+- ✅ Documentation update and refactoring
+- ✅ SessionDetail page: Add delete button with confirmation dialog
+- ✅ Empty session prevention (auto-delete sessions without user messages)
+- ✅ IconButton component: Common button component with variants (default, destructive, ghost)
 
-### 2026-01-18 (Initial)
-- ✅ Monorepo setup (pnpm + Turborepo)
-- ✅ CCD Server implementation (Bun + Hono + SQLite)
-- ✅ CCD Plugin implementation (Hooks: SessionStart, UserPromptSubmit, Stop)
-- ✅ CCD CLI implementation (ccd, ccd list, ccd report)
-- ✅ CCD Dashboard implementation (React + Vite + TailwindCSS)
-- ✅ Shared Types definition
+### 2026-01-18
+- ✅ Initial infrastructure (monorepo, server, plugin, dashboard)
+- ✅ Core hooks implementation (SessionStart, UserPromptSubmit, Stop)
 
 ---
 
 ## Next Steps
 
-1. **Phase 2 Features**
-   - [ ] Statistics chart component (recharts or chart.js)
-   - [ ] Project-based filtering
-   - [ ] Date range picker
+See [TASKS.md](TASKS.md) for detailed task management.
 
-2. **Infrastructure**
-   - [ ] Dashboard production build setup
-   - [ ] Schema migration system
-
-3. **Quality**
-   - [ ] Add unit tests
-   - [ ] Add E2E tests
+Immediate priorities:
+- Commit pending changes (v0.1.0)
+- Phase 5: Enhanced Statistics (daily stats API, charts)

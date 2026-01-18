@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createMessage, getMessageByUuid } from '../db/queries';
 import { validateRequired } from '../utils/validation';
-import type { ApiResponse, Message, CreateMessageRequest } from '@ccd/types';
+import type { ApiResponse, Message, CreateMessageRequest } from './types';
 
 const messages = new Hono();
 

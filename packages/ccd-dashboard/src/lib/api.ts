@@ -65,3 +65,14 @@ export async function toggleBookmark(id: string, note?: string): Promise<Session
   }
   return data.data!;
 }
+
+export async function deleteSession(id: string): Promise<void> {
+  const response = await fetch(`${DASHBOARD_API_BASE}/sessions/${id}`, {
+    method: 'DELETE'
+  });
+
+  const data = await response.json() as ApiResponse<{ deleted: boolean }>;
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to delete session');
+  }
+}

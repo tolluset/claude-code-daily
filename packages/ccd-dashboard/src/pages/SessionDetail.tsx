@@ -1,13 +1,15 @@
-import { useParams, Link } from 'react-router-dom';
-import { useSession, useSessionMessages, toggleBookmark } from '@/lib/api';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useSession, useSessionMessages, toggleBookmark, deleteSession } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { IconButton } from '@/components/ui/IconButton';
 import { formatDateTime, formatNumber } from '@/lib/utils';
-import { Star, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder } from 'lucide-react';
+import { Star, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder, HelpCircle, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 export function SessionDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data: session, isLoading: sessionLoading } = useSession(id!);
   const { data: messages, isLoading: messagesLoading } = useSessionMessages(id!);
   const queryClient = useQueryClient();
@@ -43,6 +45,17 @@ export function SessionDetail() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `Delete session "${session.project_name || session.id.slice(0, 8)}"?\nThis will also delete all messages in this session.`
+    );
+    if (confirmed) {
+      await deleteSession(session.id);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      navigate('/sessions');
+    }
+  };
+
   const isActive = !session.ended_at;
 
   return (
@@ -70,9 +83,11 @@ export function SessionDetail() {
           </div>
           <p className="text-muted-foreground">{formatDateTime(session.started_at)}</p>
         </div>
-        <button
+        <IconButton
+          type="button"
+          size="lg"
           onClick={handleBookmark}
-          className="p-2 hover:bg-muted rounded-lg transition-colors"
+          title="Toggle bookmark"
         >
           <Star
             className={`h-6 w-6 ${
@@ -81,7 +96,16 @@ export function SessionDetail() {
                 : 'text-muted-foreground'
             }`}
           />
-        </button>
+        </IconButton>
+        <IconButton
+          variant="destructive"
+          size="lg"
+          type="button"
+          onClick={handleDelete}
+          title="Delete session"
+        >
+          <Trash2 className="h-6 w-6" />
+        </IconButton>
       </div>
 
       {/* Session Info */}
@@ -106,16 +130,36 @@ export function SessionDetail() {
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">Session ID:</div>
             <code className="text-sm bg-muted px-2 py-1 rounded">{session.id}</code>
-            <button
+            <IconButton
+              type="button"
+              size="sm"
               onClick={handleCopyId}
-              className="p-1 hover:bg-muted rounded"
+              title="Copy session ID"
             >
               {copied ? (
                 <Check className="h-4 w-4 text-green-500" />
               ) : (
-                <Copy className="h-4 w-4 text-muted-foreground" />
+                <Copy className="h-4 w-4" />
               )}
-            </button>
+            </IconButton>
+            <div className="relative group">
+              <IconButton type="button" size="sm" title="Resume help">
+                <HelpCircle className="h-4 w-4" />
+              </IconButton>
+              <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-72 p-3 rounded-lg border bg-popover text-popover-foreground shadow-md text-xs">
+                <div className="font-medium mb-2">Resume this session:</div>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-muted-foreground">Terminal:</span>
+                    <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">claude --resume {'{session-id}'}</code>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Claude Code:</span>
+                    <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">/resume {'{session-id}'}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {session.bookmark_note && (

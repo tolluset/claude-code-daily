@@ -1,6 +1,6 @@
-import { Database } from 'bun:sqlite';
-import { join } from 'path';
-import { mkdirSync, existsSync } from 'fs';
+import Database from 'bun:sqlite';
+import { join } from 'node:path';
+import { mkdirSync, existsSync } from 'node:fs';
 
 // Data directory: ~/.ccd/
 const DATA_DIR = join(process.env.HOME || '~', '.ccd');
@@ -28,7 +28,8 @@ db.exec(`
       started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       ended_at DATETIME,
       is_bookmarked BOOLEAN DEFAULT FALSE,
-      bookmark_note TEXT
+      bookmark_note TEXT,
+      summary TEXT
   );
 
   -- Messages table
@@ -60,5 +61,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions(started_at);
   CREATE INDEX IF NOT EXISTS idx_sessions_is_bookmarked ON sessions(is_bookmarked);
 `);
+
+// Migration: Add summary column to existing sessions table
+try {
+  db.exec('ALTER TABLE sessions ADD COLUMN summary TEXT');
+} catch {
+  // Column already exists, ignore error
+}
 
 export { db, DATA_DIR, DB_PATH };

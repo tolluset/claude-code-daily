@@ -5,7 +5,7 @@ import type {
   DailyStats,
   CreateSessionRequest,
   CreateMessageRequest
-} from '@ccd/types';
+} from './types';
 
 // Session queries
 export function createSession(data: CreateSessionRequest): Session {
@@ -102,6 +102,34 @@ export function toggleBookmark(id: string, note?: string): Session | null {
     note || session.bookmark_note || null,
     id
   ) as Session | null;
+}
+
+
+export function deleteSession(id: string): boolean {
+  const session = getSession(id);
+  if (!session) return false;
+
+  // Delete messages first, then session
+  const deleteMessagesStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
+  const deleteSessionStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
+
+  const transaction = db.transaction(() => {
+    deleteMessagesStmt.run(id);
+    deleteSessionStmt.run(id);
+  });
+
+  transaction();
+  return true;
+}
+
+export function updateSessionSummary(id: string, summary: string): Session | null {
+  const stmt = db.prepare(`
+    UPDATE sessions
+    SET summary = ?
+    WHERE id = ? AND summary IS NULL
+    RETURNING *
+  `);
+  return stmt.get(summary, id) as Session | null;
 }
 
 // Message queries
@@ -210,18 +238,35 @@ export function incrementSessionCount(): void {
   stmt.run(today);
 }
 
+export function decrementSessionCount(date?: string): void {
+  const targetDate = date || getLocalDateString();
+
+  const stmt = db.prepare(`
+    UPDATE daily_stats
+    SET session_count = MAX(0, session_count - 1)
+    WHERE date = ?
+  `);
+  stmt.run(targetDate);
+}
+
 // Bulk message insert from transcript
 export function bulkInsertMessages(messages: CreateMessageRequest[]): number {
+  // Get count before insert
+  const countStmt = db.prepare('SELECT COUNT(*) as count FROM messages WHERE session_id = ?');
+  const sessionId = messages[0]?.session_id;
+  if (!sessionId) return 0;
+
+  const beforeCount = (countStmt.get(sessionId) as { count: number })?.count || 0;
+
   const stmt = db.prepare(`
     INSERT INTO messages (session_id, uuid, type, content, model, input_tokens, output_tokens, timestamp)
     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
     ON CONFLICT(uuid) DO NOTHING
   `);
 
-  let inserted = 0;
   const transaction = db.transaction(() => {
     for (const msg of messages) {
-      const result = stmt.run(
+      stmt.run(
         msg.session_id,
         msg.uuid || null,
         msg.type,
@@ -230,10 +275,12 @@ export function bulkInsertMessages(messages: CreateMessageRequest[]): number {
         msg.input_tokens || null,
         msg.output_tokens || null
       );
-      if (result.changes > 0) inserted++;
     }
   });
 
   transaction();
-  return inserted;
+
+  // Get count after insert
+  const afterCount = (countStmt.get(sessionId) as { count: number })?.count || 0;
+  return afterCount - beforeCount;
 }

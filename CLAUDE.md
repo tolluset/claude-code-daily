@@ -9,20 +9,17 @@ See docs/ folder
 
 Document list and summaries are periodically updated (Last: 2026-01-19)
 
-### docs/FEATURES.md
-Implemented features list. Includes project structure, feature status tables for server/plugin/CLI/dashboard, DB schema, and data flow diagram.
+### docs/ARCHITECTURE.md
+System architecture and tech stack. Project structure, database schema, data flow, key design decisions.
 
-### docs/INITIAL.md
-Initial planning document. Project ideas and requirements definition.
-
-### docs/PLAN.md
-Implementation plan. Architecture, tech stack, API endpoints, Hook implementation, CLI commands, dashboard features. Phase 1~4 complete.
-
-### docs/PRD.md
-Product Requirements Document. Product vision, goals, functional requirements, system architecture, data model, user stories, and future plans.
+### docs/IMPLEMENTATION.md
+Implementation details. API endpoints, Hook implementation, MCP tools, dashboard features, implementation phases.
 
 ### docs/STATUS.md
-Development progress. Component implementation status, file-by-file details, known issues, development log, and next steps.
+Development status. Package structure, file-by-file status, API endpoints, MCP tools, known issues, development log, next steps.
+
+### docs/TASKS.md
+Task management. Complete task list organized by phase with priority, status, dependencies, progress summary, and next immediate actions.
 
 ---
 

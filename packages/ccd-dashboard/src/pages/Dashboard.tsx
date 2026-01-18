@@ -105,16 +105,21 @@ export function Dashboard() {
                   to={`/sessions/${session.id}`}
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     {session.is_bookmarked && (
-                      <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                      <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
                     )}
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="font-medium">
                         {session.project_name || '(unknown)'}
                       </div>
+                      {session.summary && (
+                        <div className="text-sm text-foreground/80 truncate">
+                          {session.summary}
+                        </div>
+                      )}
                       {session.git_branch && (
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           {session.git_branch}
                         </div>
                       )}

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { HealthResponse, ApiResponse } from '@ccd/types';
+import type { HealthResponse, ApiResponse } from './types';
 
 const health = new Hono();
 

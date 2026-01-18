@@ -1,0 +1,38 @@
+{
+  "enableAllProjectMcpServers": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/bh/workspaces/ccd/packages/ccd-plugin/hooks/scripts/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/bh/workspaces/ccd/packages/ccd-plugin/hooks/scripts/user-prompt-submit.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/bh/workspaces/ccd/packages/ccd-plugin/hooks/scripts/stop.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

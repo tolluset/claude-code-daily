@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ccd": {
+      "command": "bun",
+      "args": ["run", "/Users/bh/workspaces/ccd/packages/ccd-mcp/src/index.ts"]
+    }
+  }
+}

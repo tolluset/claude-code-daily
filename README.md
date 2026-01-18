@@ -19,38 +19,55 @@ CCD automatically captures all your Claude Code sessions in the background, prov
 - **Bookmark System** - Mark important sessions with notes for quick reference
 - **Token Usage Tracking** - Monitor input/output tokens per message
 - **Web Dashboard** - React-based visualization dashboard
-- **CLI Tool** - Quick stats directly from terminal
+- **MCP Integration** - Ask Claude directly to open dashboard or show stats
 
 ## Architecture
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  CCD Plugin     │────▶│  CCD Server     │◀────│  CCD CLI        │
-│  (Hooks)        │     │  (SQLite + API) │     │  (Commands)     │
-└─────────────────┘     └────────┬────────┘     └─────────────────┘
-                                 │
-                                 ▼
-                        ┌─────────────────┐
-                        │  CCD Dashboard  │
-                        │  (React + Vite) │
-                        └─────────────────┘
+┌─────────────────┐     ┌─────────────────┐
+│  CCD Plugin     │────▶│  CCD Server     │
+│  (Hooks + MCP)  │     │  (SQLite + API + Dashboard)
+└─────────────────┘     └────────┬────────┘
+                                   │
+          ┌────────────────────────┼────────────────────────┐
+          ▼                        ▼                        ▼
+  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+  │  MCP Tools      │     │  HTTP API       │     │  Web Dashboard  │
+  │  (LLM Access)   │     │  (Sessions,    │     │  (React UI)     │
+  │                 │     │   Messages,     │     │                 │
+  │  • open_dashboard│     │   Stats)       │     │  • Stats cards  │
+  │  • get_stats    │     │                 │     │  • Sessions     │
+  └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
 ---
 
 ## Installation
 
-### Option 1: From Marketplace (Recommended)
+### Quick Start (Recommended)
 
 ```bash
-# Add marketplace
+# Inside Claude Code
 /plugin marketplace add tolluset/claude-code-daily
-
-# Install plugin
 /plugin install ccd@claude-code-daily
 ```
 
-### Option 2: From Source
+That's it! The plugin will:
+- Automatically start the server when you begin a Claude Code session
+- Track all your sessions and messages
+- Configure MCP tools for easy access
+
+### Manual Installation
+
+If you need to install the server manually:
+
+```bash
+npm install -g ccd-server
+```
+
+The server will be auto-started by the plugin when needed.
+
+### From Source (Development)
 
 ```bash
 # Clone repository
@@ -67,13 +84,27 @@ pnpm build
 claude --plugin-dir ./packages/ccd-plugin
 ```
 
+### Plugin Configuration (Development)
+
+The plugin will be auto-detected by Claude Code when using `--plugin-dir`.
+
+For permanent installation, add to `~/.claude/settings.json`:
+
+```json
+{
+  "pluginDirectories": [
+    "/path/to/claude-code-daily/packages/ccd-plugin"
+  ]
+}
+```
+
 ---
 
 ## Usage
 
-### Plugin Features
+### Auto Tracking
 
-Once the plugin is installed, CCD automatically:
+Once the plugin is loaded, CCD automatically:
 - Starts the server when a Claude Code session begins
 - Registers each session with project info and git branch
 - Saves user prompts in real-time
@@ -88,40 +119,22 @@ Once the plugin is installed, CCD automatically:
 /bookmark "note"       # Bookmark with a note
 ```
 
-### CLI Commands
+### MCP Tools (Ask Claude)
 
-| Command | Description |
-|---------|-------------|
-| `ccd` | Open web dashboard in browser |
-| `ccd report` | Show today's statistics |
-| `ccd list` | List today's sessions (bookmarked first) |
+When the MCP server is configured, you can ask Claude directly:
 
-### CLI Output Examples
+| Request | MCP Tool |
+|---------|----------|
+| "Open the dashboard" | `open_dashboard` - Opens dashboard in browser |
+| "Show my stats" | `get_stats` - Returns session statistics |
+| "What did I do this week?" | `get_stats(period: "week")` - Weekly summary |
 
-**`ccd report`**
-```
-📊 Claude Code Daily Report
+### Web Dashboard
 
-Date: 2026-01-19
-────────────────────────────────
-Sessions:        5
-Messages:        127
-Input Tokens:    45,230
-Output Tokens:   89,102
-────────────────────────────────
-```
-
-**`ccd list`**
-```
-📋 Today's Sessions
-
-   Time     Project              Description                    Messages
-──────────────────────────────────────────────────────────────────────────
-★  14:30   ccd                  Plugin hook implementation       23
-★  10:15   my-app               Login bug fix                    15
-   16:45   ccd                  CLI command implementation       8
-   09:00   docs                 README update                    3
-```
+Open http://localhost:3847 in your browser (or ask Claude to "open dashboard") to view:
+- Today's stats summary
+- Session list with bookmark filter
+- Session details with conversation history
 
 ---
 
@@ -130,15 +143,31 @@ Output Tokens:   89,102
 ### Running Locally
 
 ```bash
-# Server (Port 3847)
+# Server (Port 3847 - includes Dashboard)
 cd packages/ccd-server && bun run src/index.ts
 
-# Dashboard (Port 3848)
-cd packages/ccd-dashboard && pnpm dev
+# MCP Server (for development/testing)
+cd packages/ccd-mcp && bun run src/index.ts
 
-# CLI
-cd packages/ccd-cli && bun run src/index.ts
+# Dashboard dev mode (Vite with HMR)
+cd packages/ccd-dashboard && pnpm dev
 ```
+
+### Packaging Server for npm
+
+```bash
+# Build dashboard for production
+cd packages/ccd-dashboard && pnpm build
+
+# Build server and package for npm
+cd packages/ccd-server
+pnpm build
+npm pack
+```
+
+### MCP Configuration
+
+The plugin includes `.mcp.json` for auto-configuration. When installed, MCP tools are automatically available.
 
 ### Project Structure
 
@@ -146,9 +175,9 @@ cd packages/ccd-cli && bun run src/index.ts
 ccd/
 ├── packages/
 │   ├── ccd-server/      # Backend server (Bun + Hono + SQLite)
-│   ├── ccd-cli/         # CLI tool (Commander.js)
 │   ├── ccd-dashboard/   # Web dashboard (React + Vite)
-│   └── ccd-plugin/      # Claude Code plugin (Bash hooks)
+│   ├── ccd-mcp/         # MCP server for LLM tools
+│   └── ccd-plugin/      # Claude Code plugin (Hooks + MCP)
 └── shared/
     └── types/           # Shared TypeScript types
 ```
@@ -165,14 +194,12 @@ No external servers or cloud services are used - your data stays on your machine
 
 ## Documentation
 
-See `docs/` folder for detailed documentation:
-
 | Document | Description |
 |----------|-------------|
-| [FEATURES.md](docs/FEATURES.md) | Implemented features list |
-| [PLAN.md](docs/PLAN.md) | Implementation plan and API spec |
-| [PRD.md](docs/PRD.md) | Product Requirements Document |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture and tech stack |
+| [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | API and implementation details |
 | [STATUS.md](docs/STATUS.md) | Development progress |
+| [TASKS.md](docs/TASKS.md) | Task management |
 
 ---
 
@@ -181,10 +208,20 @@ See `docs/` folder for detailed documentation:
 | Component | Technology |
 |-----------|------------|
 | Monorepo | pnpm workspaces + Turborepo |
-| Server | Bun + Hono + SQLite |
+| Server | Node.js + Hono + better-sqlite3 |
 | Plugin | Bash scripts + Claude Code Hooks |
-| CLI | TypeScript + Commander.js |
+| MCP | @modelcontextprotocol/sdk + Zod |
 | Dashboard | React + Vite + TailwindCSS + TanStack Query |
+
+---
+
+## Future Features
+
+Phase 2 (In Planning):
+- Daily stats API with date range
+- Reports page with charts
+- Project-based filtering
+- Date range picker
 
 ---
 

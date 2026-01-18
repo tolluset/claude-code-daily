@@ -33,23 +33,11 @@ if curl -s --connect-timeout 2 "$CCD_SERVER_URL/api/v1/health" > /dev/null 2>&1;
     SERVER_RUNNING=true
 fi
 
-# 2. Start server if not running
+# 2. Start server with npx if not running
 if [ "$SERVER_RUNNING" = false ]; then
-    # Check if ccd-server is installed
-    if command -v ccd-server &> /dev/null; then
-        nohup ccd-server > "$CCD_DATA_DIR/server.log" 2>&1 &
-    else
-        # In development, run directly with bun
-        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        SERVER_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")/ccd-server"
-        if [ -f "$SERVER_DIR/src/index.ts" ]; then
-            mkdir -p "$CCD_DATA_DIR"
-            nohup bun run "$SERVER_DIR/src/index.ts" > "$CCD_DATA_DIR/server.log" 2>&1 &
-        fi
-    fi
-
-    # Wait briefly for server to start
-    sleep 1
+    mkdir -p "$CCD_DATA_DIR"
+    nohup npx -y ccd-server > "$CCD_DATA_DIR/server.log" 2>&1 &
+    sleep 2
 fi
 
 # 3. Register session

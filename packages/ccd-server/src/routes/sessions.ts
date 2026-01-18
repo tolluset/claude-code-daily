@@ -6,6 +6,7 @@ import {
   getTodaySessions,
   endSession,
   toggleBookmark,
+  deleteSession,
   getMessages,
   incrementSessionCount
 } from '../db/queries';
@@ -18,7 +19,7 @@ import type {
   CreateSessionRequest,
   BookmarkRequest,
   Message
-} from '@ccd/types';
+} from './types';
 
 const sessions = new Hono();
 
@@ -141,6 +142,24 @@ sessions.post('/:id/bookmark', async (c) => {
   return c.json<ApiResponse<Session>>({
     success: true,
     data: session
+  });
+});
+
+// Delete session
+sessions.delete('/:id', (c) => {
+  const id = c.req.param('id');
+  const deleted = deleteSession(id);
+
+  if (!deleted) {
+    return c.json<ApiResponse<null>>({
+      success: false,
+      error: 'Session not found'
+    }, 404);
+  }
+
+  return c.json<ApiResponse<{ deleted: boolean }>>({
+    success: true,
+    data: { deleted: true }
   });
 });
 

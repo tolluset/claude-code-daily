@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { getTodayStats, getTodaySessions } from '../db/queries';
-import type { ApiResponse, TodayStatsResponse } from '@ccd/types';
+import type { ApiResponse, TodayStatsResponse } from './types';
 
 const stats = new Hono();
 

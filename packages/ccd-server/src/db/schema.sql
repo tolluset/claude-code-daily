@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ended_at DATETIME,
     is_bookmarked BOOLEAN DEFAULT FALSE,
-    bookmark_note TEXT
+    bookmark_note TEXT,
+    summary TEXT                      -- First user message as session summary
 );
 
 -- Messages table

@@ -1,20 +1,29 @@
 {
   "name": "@ccd/server",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
+  "bin": {
+    "ccd-server": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "dashboard"
+  ],
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun",
-    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "build:bin": "bun build src/index.ts --compile --outfile dist/ccd-server",
+    "build:bin:all": "bun build src/index.ts --compile --target=bun-darwin-arm64 --outfile dist/ccd-server-darwin-arm64 && bun build src/index.ts --compile --target=bun-darwin-x64 --outfile dist/ccd-server-darwin-x64 && bun build src/index.ts --compile --target=bun-linux-x64 --outfile dist/ccd-server-linux-x64",
+    "start": "node dist/index.js",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@ccd/types": "workspace:*",
     "hono": "^4.6.17"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/node": "^22.19.7",
     "typescript": "^5.7.3"
   }
 }

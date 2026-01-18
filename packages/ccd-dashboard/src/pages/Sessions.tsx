@@ -1,7 +1,8 @@
-import { useSessions, toggleBookmark } from '@/lib/api';
+import { useSessions, toggleBookmark, deleteSession } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { IconButton } from '@/components/ui/IconButton';
 import { formatDate, formatTime } from '@/lib/utils';
-import { Star, GitBranch, Clock, Copy, Check } from 'lucide-react';
+import { Star, GitBranch, Clock, Copy, Check, Trash2, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -51,6 +52,18 @@ export function Sessions() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleDelete = async (session: Session, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      `Delete session "${session.project_name || session.id.slice(0, 8)}"?\nThis will also delete all messages in this session.`
+    );
+    if (confirmed) {
+      await deleteSession(session.id);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -74,6 +87,7 @@ export function Sessions() {
                   session={session}
                   onBookmark={handleBookmark}
                   onCopyId={handleCopyId}
+                  onDelete={handleDelete}
                   copiedId={copiedId}
                 />
               ))}
@@ -103,6 +117,7 @@ export function Sessions() {
                   session={session}
                   onBookmark={handleBookmark}
                   onCopyId={handleCopyId}
+                  onDelete={handleDelete}
                   copiedId={copiedId}
                 />
               ))}
@@ -122,10 +137,11 @@ interface SessionItemProps {
   session: Session;
   onBookmark: (session: Session, e: React.MouseEvent) => void;
   onCopyId: (id: string, e: React.MouseEvent) => void;
+  onDelete: (session: Session, e: React.MouseEvent) => void;
   copiedId: string | null;
 }
 
-function SessionItem({ session, onBookmark, onCopyId, copiedId }: SessionItemProps) {
+function SessionItem({ session, onBookmark, onCopyId, onDelete, copiedId }: SessionItemProps) {
   const isActive = !session.ended_at;
 
   return (
@@ -134,9 +150,11 @@ function SessionItem({ session, onBookmark, onCopyId, copiedId }: SessionItemPro
       className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted transition-colors"
     >
       <div className="flex items-center gap-4">
-        <button
+        <IconButton
+          type="button"
+          size="sm"
           onClick={(e) => onBookmark(session, e)}
-          className="p-1 hover:bg-muted-foreground/10 rounded"
+          className="p-1"
         >
           <Star
             className={`h-5 w-5 ${
@@ -145,13 +163,18 @@ function SessionItem({ session, onBookmark, onCopyId, copiedId }: SessionItemPro
                 : 'text-muted-foreground'
             }`}
           />
-        </button>
+        </IconButton>
 
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-green-500' : 'bg-muted-foreground'}`} />
             <span className="font-medium">{session.project_name || '(unknown)'}</span>
           </div>
+          {session.summary && (
+            <p className="text-sm text-foreground/80 mt-1 truncate max-w-md">
+              {session.summary}
+            </p>
+          )}
           <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
             {session.git_branch && (
               <span className="flex items-center gap-1">
@@ -170,18 +193,52 @@ function SessionItem({ session, onBookmark, onCopyId, copiedId }: SessionItemPro
         </div>
       </div>
 
-      <button
-        onClick={(e) => onCopyId(session.id, e)}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground p-2"
-        title="Copy session ID"
-      >
-        {copiedId === session.id ? (
-          <Check className="h-4 w-4 text-green-500" />
-        ) : (
-          <Copy className="h-4 w-4" />
-        )}
-        <code className="text-xs">{session.id.slice(0, 8)}</code>
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={(e) => onCopyId(session.id, e)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground p-2"
+          title="Copy session ID"
+        >
+          {copiedId === session.id ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+          <code className="text-xs">{session.id.slice(0, 8)}</code>
+        </button>
+        <div className="relative group">
+          <IconButton
+            type="button"
+            size="sm"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            title="Resume help"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </IconButton>
+          <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50 w-72 p-3 rounded-lg border bg-popover text-popover-foreground shadow-md text-xs">
+            <div className="font-medium mb-2">Resume this session:</div>
+            <div className="space-y-2">
+              <div>
+                <span className="text-muted-foreground">Terminal:</span>
+                <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">claude --resume {'{session-id}'}</code>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Claude Code:</span>
+                <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">/resume {'{session-id}'}</code>
+              </div>
+            </div>
+          </div>
+        </div>
+        <IconButton
+          variant="destructive"
+          size="sm"
+          onClick={(e) => onDelete(session, e)}
+          title="Delete session"
+        >
+          <Trash2 className="h-4 w-4" />
+        </IconButton>
+      </div>
     </Link>
   );
 }
