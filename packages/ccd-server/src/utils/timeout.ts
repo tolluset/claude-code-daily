@@ -1,7 +1,7 @@
 // Server auto-shutdown timer
 // Automatically shuts down after 1 hour of inactivity
 
-const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+import { DEFAULT_IDLE_TIMEOUT_MS } from '@ccd/types';
 
 let timeoutId: Timer | null = null;
 let lastActivity = Date.now();
@@ -13,10 +13,10 @@ export function resetIdleTimer(): void {
     clearTimeout(timeoutId);
   }
 
-  timeoutId = setTimeout(() => {
-    console.log('[CCD Server] Idle timeout reached. Shutting down...');
-    process.exit(0);
-  }, IDLE_TIMEOUT_MS);
+   timeoutId = setTimeout(() => {
+     console.log('[CCD Server] Idle timeout reached. Shutting down...');
+     process.exit(0);
+   }, DEFAULT_IDLE_TIMEOUT_MS);
 }
 
 export function getLastActivity(): number {

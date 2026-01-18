@@ -1,0 +1,28 @@
+{
+  "name": "@ccd/opencode-plugin",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "description": "OpenCode plugin for Claude Code Daily - Session tracking and analytics",
+  "author": {
+    "name": "tolluset"
+  },
+  "repository": "https://github.com/tolluset/claude-code-daily",
+  "keywords": ["opencode", "analytics", "session", "tracking", "dashboard"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target bun --format esm && tsc --emitDeclarationOnly",
+    "dev": "bun run src/index.ts"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.1.0"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.1.25",
+    "typescript": "^5.7.3"
+  }
+}

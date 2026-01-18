@@ -3,7 +3,7 @@
 
 -- Sessions table
 CREATE TABLE IF NOT EXISTS sessions (
-    id TEXT PRIMARY KEY,              -- Claude Code session_id
+    id TEXT PRIMARY KEY,              -- Claude Code session_id or OpenCode session.id
     transcript_path TEXT NOT NULL,
     cwd TEXT NOT NULL,
     project_name TEXT,
@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     ended_at DATETIME,
     is_bookmarked BOOLEAN DEFAULT FALSE,
     bookmark_note TEXT,
-    summary TEXT                      -- First user message as session summary
+    summary TEXT,                     -- First user message as session summary
+    source TEXT DEFAULT 'claude'       -- Session source: 'claude' or 'opencode'
+    CHECK (source IN ('claude', 'opencode'))
 );
 
 -- Messages table
@@ -36,6 +38,13 @@ CREATE TABLE IF NOT EXISTS daily_stats (
     message_count INTEGER DEFAULT 0,
     total_input_tokens INTEGER DEFAULT 0,
     total_output_tokens INTEGER DEFAULT 0
+);
+
+-- Migrations table
+CREATE TABLE IF NOT EXISTS migrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes

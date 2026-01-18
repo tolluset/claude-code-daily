@@ -181,6 +181,103 @@ function formatStats(stats: any, period: string): string {
   return lines.join("\n");
 }
 
+// Tool: search_sessions - Search sessions and messages by content
+server.tool(
+  "search_sessions",
+  "Search Claude Code sessions and messages by content. Finds relevant past conversations, code examples, and solutions.",
+  {
+    query: z
+      .string()
+      .min(1)
+      .describe("Search query - keywords or phrases to find in sessions and messages"),
+    project: z
+      .string()
+      .optional()
+      .describe("Filter by project name"),
+    days: z
+      .number()
+      .optional()
+      .describe("Limit search to last N days (default: 30)"),
+  },
+  async ({ query, project, days = 30 }) => {
+    const isServerUp = await checkServerHealth();
+    if (!isServerUp) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: "CCD server is not running. Cannot search sessions.",
+          },
+        ],
+      };
+    }
+
+    try {
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - days);
+
+      const params = new URLSearchParams({ q: query });
+      if (project) params.set('project', project);
+      params.set('from', fromDate.toISOString().split('T')[0]);
+
+      const response = await fetch(`${SERVER_URL}/api/v1/search?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const { data: results } = await response.json() as { data: Array<{
+        session_id: string;
+        content: string;
+        snippet: string;
+        type: string;
+        score: number;
+        timestamp: string;
+        project_name: string | null;
+        is_bookmarked: boolean;
+      }>};
+
+      if (!results || results.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No results found for "${query}"`,
+            },
+          ],
+        };
+      }
+
+      const formatted = results
+        .slice(0, 10)
+        .map((r, i) =>
+          `#${i + 1} [${r.project_name || 'Unknown'}] (${r.timestamp})
+Type: ${r.type}
+${r.snippet.replace(/<[^>]*>/g, '')}
+→ Session: http://localhost:${DASHBOARD_PORT}/sessions/${r.session_id}`
+        )
+        .join('\n\n');
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `🔍 Search Results for "${query}" (${results.length} found)\n\n${formatted}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Search failed: ${error}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 // Start server
 async function main() {
   const transport = new StdioServerTransport();

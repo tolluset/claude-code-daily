@@ -1,22 +1,27 @@
 import { db } from './index';
+import { randomUUID } from 'node:crypto';
+import { QueryBuilder } from './query-builder';
 import type {
   Session,
   Message,
   DailyStats,
   CreateSessionRequest,
-  CreateMessageRequest
-} from './types';
+  CreateMessageRequest,
+  SearchResult,
+  SearchOptions
+} from '@ccd/types';
 
 // Session queries
 export function createSession(data: CreateSessionRequest): Session {
   const stmt = db.prepare(`
-    INSERT INTO sessions (id, transcript_path, cwd, project_name, git_branch, started_at)
-    VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
+    INSERT INTO sessions (id, transcript_path, cwd, project_name, git_branch, source, started_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
     ON CONFLICT(id) DO UPDATE SET
       transcript_path = excluded.transcript_path,
       cwd = excluded.cwd,
       project_name = excluded.project_name,
-      git_branch = excluded.git_branch
+      git_branch = excluded.git_branch,
+      source = excluded.source
     RETURNING *
   `);
 
@@ -25,7 +30,8 @@ export function createSession(data: CreateSessionRequest): Session {
     data.transcript_path,
     data.cwd,
     data.project_name || null,
-    data.git_branch || null
+    data.git_branch || null,
+    data.source || 'claude'
   ) as Session;
 }
 
@@ -36,34 +42,14 @@ export function getSession(id: string): Session | null {
 
 export function getSessions(options: {
   date?: string;
+  from?: string;
+  to?: string;
+  project?: string;
   limit?: number;
   offset?: number;
   bookmarkedFirst?: boolean;
 }): Session[] {
-  let query = 'SELECT * FROM sessions';
-  const params: (string | number)[] = [];
-
-  if (options.date) {
-    query += ' WHERE date(started_at) = ?';
-    params.push(options.date);
-  }
-
-  if (options.bookmarkedFirst) {
-    query += ' ORDER BY is_bookmarked DESC, started_at DESC';
-  } else {
-    query += ' ORDER BY started_at DESC';
-  }
-
-  if (options.limit) {
-    query += ' LIMIT ?';
-    params.push(options.limit);
-  }
-
-  if (options.offset) {
-    query += ' OFFSET ?';
-    params.push(options.offset);
-  }
-
+  const { query, params } = QueryBuilder.buildSessionQuery(options);
   const stmt = db.prepare(query);
   return stmt.all(...params) as Session[];
 }
@@ -147,7 +133,7 @@ export function createMessage(data: CreateMessageRequest): Message {
 
   const result = stmt.get(
     data.session_id,
-    data.uuid || null,
+    data.uuid || randomUUID(),
     data.type,
     data.content || null,
     data.model || null,
@@ -249,6 +235,49 @@ export function decrementSessionCount(date?: string): void {
   stmt.run(targetDate);
 }
 
+export function cleanEmptySessions(): { deleted: string[]; sessions: string[] } {
+  const findEmptySessionsStmt = db.prepare(`
+    SELECT id, date(started_at) as date
+    FROM sessions
+    WHERE id NOT IN (SELECT DISTINCT session_id FROM messages)
+  `);
+  
+  const emptySessions = findEmptySessionsStmt.all() as { id: string; date: string }[];
+  const deleted: string[] = [];
+  const dates: string[] = [];
+
+  const deleteSessionStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
+
+  const transaction = db.transaction(() => {
+    for (const session of emptySessions) {
+      deleteSessionStmt.run(session.id);
+      deleted.push(session.id);
+      if (!dates.includes(session.date)) {
+        dates.push(session.date);
+      }
+    }
+  });
+
+  transaction();
+
+  for (const date of dates) {
+    decrementSessionCount(date);
+  }
+
+  return { deleted, sessions: dates };
+}
+
+export function getDailyStats(options: {
+  from?: string;
+  to?: string;
+  days?: number;
+  project?: string;
+}): DailyStats[] {
+  const { query, params } = QueryBuilder.buildDailyStatsQuery(options);
+  const stmt = db.prepare(query);
+  return stmt.all(...params) as DailyStats[];
+}
+
 // Bulk message insert from transcript
 export function bulkInsertMessages(messages: CreateMessageRequest[]): number {
   // Get count before insert
@@ -283,4 +312,103 @@ export function bulkInsertMessages(messages: CreateMessageRequest[]): number {
   // Get count after insert
   const afterCount = (countStmt.get(sessionId) as { count: number })?.count || 0;
   return afterCount - beforeCount;
+}
+
+export function searchSessions(options: SearchOptions): SearchResult[] {
+  const filters: string[] = [];
+  const params: (string | number)[] = [options.query, options.query];
+
+  if (options.from) {
+    filters.push('date(s.started_at) >= ?');
+    params.push(options.from);
+  }
+
+  if (options.to) {
+    filters.push('date(s.started_at) <= ?');
+    params.push(options.to);
+  }
+
+  if (options.project) {
+    filters.push('s.project_name = ?');
+    params.push(options.project);
+  }
+
+  if (options.bookmarkedOnly) {
+    filters.push('s.is_bookmarked = 1');
+  }
+
+  const filterClause = filters.length > 0 ? ' AND ' + filters.join(' AND ') : '';
+
+  const query = `
+    WITH message_results AS (
+      SELECT
+        m.id as message_id,
+        m.session_id,
+        m.content,
+        m.type,
+        messages_fts.rank as score,
+        m.timestamp,
+        snippet(messages_fts, 0, '<mark>', '</mark>', '...', 30) as snippet,
+        'message' as result_type
+      FROM messages_fts
+      JOIN messages m ON messages_fts.content = m.content AND messages_fts.session_id = m.session_id
+      WHERE messages_fts MATCH ?
+    ),
+    session_results AS (
+      SELECT
+        NULL as message_id,
+        sessions_fts.id as session_id,
+        COALESCE(sessions_fts.summary, sessions_fts.bookmark_note, '') as content,
+        NULL as type,
+        sessions_fts.rank as score,
+        sessions_fts.started_at as timestamp,
+        snippet(sessions_fts, 0, '<mark>', '</mark>', '...', 30) as snippet,
+        CASE
+          WHEN sessions_fts.summary IS NOT NULL THEN 'session_summary'
+          WHEN sessions_fts.bookmark_note IS NOT NULL THEN 'bookmark_note'
+          ELSE 'unknown'
+        END as result_type
+      FROM sessions_fts
+      JOIN sessions s ON sessions_fts.id = s.id
+      WHERE sessions_fts MATCH ?
+    )
+    SELECT
+      mr.session_id,
+      mr.message_id,
+      mr.content,
+      mr.snippet,
+      mr.result_type as type,
+      mr.score,
+      mr.timestamp,
+      s.project_name,
+      s.is_bookmarked
+    FROM message_results mr
+    JOIN sessions s ON mr.session_id = s.id${filterClause}
+
+    UNION ALL
+
+    SELECT
+      sr.session_id,
+      sr.message_id,
+      sr.content,
+      sr.snippet,
+      sr.result_type as type,
+      sr.score,
+      sr.timestamp,
+      s.project_name,
+      s.is_bookmarked
+    FROM session_results sr
+    JOIN sessions s ON sr.session_id = s.id${filterClause}
+  LIMIT ?
+  `;
+
+  params.push((options.limit || 20) * 2);
+
+  const results = db.prepare(query).all(...params) as SearchResult[];
+
+    return results.sort((a, b) => {
+    const scoreA = (a.score * 0.7) + (a.is_bookmarked ? 0 : 1 * 0.2);
+    const scoreB = (b.score * 0.7) + (b.is_bookmarked ? 0 : 1 * 0.2);
+    return scoreA - scoreB;
+  }).slice(options.offset || 0, (options.offset || 0) + (options.limit || 20));
 }

@@ -1,17 +1,7 @@
 import { Hono } from 'hono';
-import {
-  createSession,
-  getSession,
-  getSessions,
-  getTodaySessions,
-  endSession,
-  toggleBookmark,
-  deleteSession,
-  getMessages,
-  incrementSessionCount
-} from '../db/queries';
-import { validateRequired } from '../utils/validation';
+import { SessionService } from '../services';
 import { parseIntParam, parseBoolParam } from '../utils/params';
+import { successResponse, errorResponse, notFoundResponse } from '../utils/responses';
 import type {
   ApiResponse,
   Session,
@@ -19,103 +9,64 @@ import type {
   CreateSessionRequest,
   BookmarkRequest,
   Message
-} from './types';
+} from '@ccd/types';
 
 const sessions = new Hono();
 
 // List sessions
 sessions.get('/', (c) => {
   const date = c.req.query('date');
+  const from = c.req.query('from');
+  const to = c.req.query('to');
+  const project = c.req.query('project');
   const limit = parseIntParam(c.req.query('limit'));
   const offset = parseIntParam(c.req.query('offset'));
   const today = parseBoolParam(c.req.query('today'));
 
-  let sessionList: Session[];
+  const sessionList = SessionService.getSessions({
+    date: date || undefined,
+    from: from || undefined,
+    to: to || undefined,
+    project: project || undefined,
+    limit,
+    offset,
+    bookmarkedFirst: true,
+    today
+  });
 
-  if (today) {
-    sessionList = getTodaySessions();
-  } else {
-    sessionList = getSessions({
-      date: date || undefined,
-      limit,
-      offset,
-      bookmarkedFirst: true
-    });
-  }
-
-  const response: ApiResponse<SessionListResponse> = {
-    success: true,
-    data: {
-      sessions: sessionList,
-      total: sessionList.length
-    }
-  };
-
-  return c.json(response);
+  return c.json(successResponse({
+    sessions: sessionList,
+    total: sessionList.length
+  }));
 });
 
 // Create session
 sessions.post('/', async (c) => {
-  try {
-    const body = await c.req.json<CreateSessionRequest>();
-
-    const validation = validateRequired(body, ['session_id', 'transcript_path', 'cwd']);
-    if (!validation.valid) {
-      return c.json<ApiResponse<null>>({
-        success: false,
-        error: `Missing required fields: ${validation.missing.join(', ')}`
-      }, 400);
-    }
-
-    const session = createSession(body);
-    incrementSessionCount();
-
-    return c.json<ApiResponse<Session>>({
-      success: true,
-      data: session
-    }, 201);
-  } catch (error) {
-    return c.json<ApiResponse<null>>({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, 500);
-  }
+  const body = await c.req.json<CreateSessionRequest>();
+  const session = SessionService.createSession(body);
+  return c.json(successResponse(session), 201);
 });
 
 // Get session details
 sessions.get('/:id', (c) => {
   const id = c.req.param('id');
-  const session = getSession(id);
-
-  if (!session) {
-    return c.json<ApiResponse<null>>({
-      success: false,
-      error: 'Session not found'
-    }, 404);
-  }
-
-  return c.json<ApiResponse<Session>>({
-    success: true,
-    data: session
-  });
+  const session = SessionService.getSession(id);
+  return c.json(successResponse(session));
 });
 
 // End session
 sessions.post('/:id/end', (c) => {
   const id = c.req.param('id');
-  const session = endSession(id);
+  const session = SessionService.endSession(id);
+  return c.json(successResponse(session));
+});
 
-  if (!session) {
-    return c.json<ApiResponse<null>>({
-      success: false,
-      error: 'Session not found'
-    }, 404);
-  }
-
-  return c.json<ApiResponse<Session>>({
-    success: true,
-    data: session
-  });
+// Update session summary
+sessions.post('/:id/summary', async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json<{ summary?: string }>();
+  const session = SessionService.updateSessionSummary(id, body.summary || '');
+  return c.json(successResponse(session));
 });
 
 // Toggle bookmark
@@ -130,57 +81,22 @@ sessions.post('/:id/bookmark', async (c) => {
     // Body is optional
   }
 
-  const session = toggleBookmark(id, note);
-
-  if (!session) {
-    return c.json<ApiResponse<null>>({
-      success: false,
-      error: 'Session not found'
-    }, 404);
-  }
-
-  return c.json<ApiResponse<Session>>({
-    success: true,
-    data: session
-  });
+  const session = SessionService.toggleBookmark(id, note);
+  return c.json(successResponse(session));
 });
 
 // Delete session
 sessions.delete('/:id', (c) => {
   const id = c.req.param('id');
-  const deleted = deleteSession(id);
-
-  if (!deleted) {
-    return c.json<ApiResponse<null>>({
-      success: false,
-      error: 'Session not found'
-    }, 404);
-  }
-
-  return c.json<ApiResponse<{ deleted: boolean }>>({
-    success: true,
-    data: { deleted: true }
-  });
+  SessionService.deleteSession(id);
+  return c.json(successResponse({ deleted: true }));
 });
 
 // List messages for a session
 sessions.get('/:id/messages', (c) => {
   const id = c.req.param('id');
-  const session = getSession(id);
-
-  if (!session) {
-    return c.json<ApiResponse<null>>({
-      success: false,
-      error: 'Session not found'
-    }, 404);
-  }
-
-  const messageList = getMessages(id);
-
-  return c.json<ApiResponse<Message[]>>({
-    success: true,
-    data: messageList
-  });
+  const messageList = SessionService.getSessionMessages(id);
+  return c.json(successResponse(messageList));
 });
 
 export { sessions };

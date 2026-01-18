@@ -44,6 +44,13 @@ Base URL: `http://localhost:3847/api/v1`
 | GET | /stats/daily?from=...&to=... | Daily stats with range |
 | GET | /stats/daily?days=7 | Last N days |
 
+### Search
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /search | Full-text search across sessions/messages |
+| GET | /search?q=...&project=...&bookmarked=true | Search with filters |
+
 ### Sync
 
 | Method | Endpoint | Description |
@@ -62,6 +69,24 @@ Base URL: `http://localhost:3847/api/v1`
 | `UserPromptSubmit` | Capture user prompt |
 | `Stop` | Parse transcript on Claude response complete |
 | `SessionEnd` | Handle session end (unused - replaced by Stop) |
+
+### OpenCode Plugin Events
+
+| Event | Purpose |
+|-------|---------|
+| `session.created` | Start server + register session |
+| `session.idle` | End session |
+| `message.updated` (role='user') | Save user message (TextPart only) |
+| `message.updated` (role='assistant') | Save assistant message + tokens |
+
+#### Event Mapping with Claude Code Hooks
+
+| Claude Code Hook | OpenCode Event | Purpose |
+|-----------------|------------------|---------|
+| SessionStart | session.created | Register session |
+| UserPromptSubmit | message.updated (role='user') | Save user prompt |
+| Stop | message.updated (role='assistant') | Save assistant response |
+| (none) | session.idle | End session |
 
 ### SessionStart Core Logic
 
@@ -102,6 +127,7 @@ exit 0
 |------|-------------|------------|
 | `open_dashboard` | Open dashboard in browser | None |
 | `get_stats` | Get session statistics | period: "today" \| "week" \| "month" \| "all" |
+| `search_sessions` | Full-text search sessions | query (required), project (optional), days (optional, default: 30) |
 
 ### Usage Examples
 
@@ -166,13 +192,143 @@ Ask Claude directly:
 
 ### Phase 5: Enhanced Statistics 🚧
 
-- [ ] Daily stats API (`GET /api/v1/stats/daily`)
-- [ ] Date range query support
-- [ ] Project-based filtering
-- [ ] Reports page with charts
-- [ ] Token trend chart (Recharts)
-- [ ] Session bar chart (Recharts)
+- [x] Daily stats API (`GET /api/v1/stats/daily`)
+- [x] Date range query support
+- [x] Project-based filtering
+- [x] Reports page with charts
+- [x] Token trend chart (Recharts)
+- [x] Session bar chart (Recharts)
 - [ ] Project pie chart (Recharts)
+
+### Phase 6: Enhanced Filtering ✅
+
+- [x] Add project filter to Sessions page
+- [x] Add date range to Sessions page
+- [x] Add project filter to Reports page
+
+### Phase 7: Infrastructure Improvements 🚧
+
+- [ ] Dashboard production build setup
+- [x] Schema migration system
+- [ ] Add *bun-build to .gitignore
+- [x] Scheduled empty session cleanup
+
+### Phase 8: Quality & Testing 🚧
+
+- [x] Add unit tests for server routes (22 tests)
+- [ ] Add E2E tests for hooks
+- [x] Add integration tests for API (7 tests)
+
+### Phase 10: Full-Text Search ✅
+
+- [x] FTS5 database migration (003_add_fts_search)
+- [x] searchSessions() query function with BM25 ranking
+- [x] GET /api/v1/search endpoint
+- [x] Search page UI with filters and result highlighting
+- [x] DiffView component for code diff visualization
+- [x] search_sessions MCP tool
+- [x] SearchResult and SearchOptions type definitions
+
+---
+
+## OpenCode Plugin Implementation
+
+### Plugin Architecture
+
+The OpenCode plugin (`ccd-tracker.ts`) provides session tracking through event-based hooks:
+
+**Location**: `packages/ccd-plugin/.opencode/plugins/ccd-tracker.ts`
+
+**Event Subscriptions**:
+- `session.created`: Register new OpenCode session
+- `message.updated`: Track user/assistant messages
+- `session.idle`: Mark session as ended
+
+### Core Functions
+
+#### Session Registration
+```typescript
+async function registerSession(data: {
+  session_id: string;
+  transcript_path: string;
+  cwd: string;
+  project_name?: string;
+  source: 'claude' | 'opencode';
+}): Promise<void>
+```
+
+- Checks server health via `/api/v1/health`
+- Starts CCD server if not running
+- Registers session with `source='opencode'`
+
+#### Message Saving
+```typescript
+async function saveMessage(data: {
+  session_id: string;
+  uuid?: string;
+  type: 'user' | 'assistant';
+  content?: string;
+  model?: string | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+}): Promise<void>
+```
+
+- Extracts text content from message parts (TextPart only - Option 2a)
+- Saves user/assistant messages
+- Updates daily stats for token usage
+
+#### Content Extraction
+```typescript
+function extractTextContent(parts?: Array<{ type: string; text?: string }>): string {
+  if (!parts) return '';
+  return parts
+    .filter(part => part.type === 'text' && part.text)
+    .map(part => part.text)
+    .join('');
+}
+```
+
+- Filters parts by `type === 'text'`
+- Extracts and concatenates text content
+- Ignores tool calls, files, and other part types (Option 2a: Simple)
+
+#### Session Management
+```typescript
+async function updateSessionSummary(sessionId: string, summary: string): Promise<void>
+async function endSession(sessionId: string): Promise<void>
+```
+
+- First user message used as session summary (Option 3a)
+- Marks session as ended on idle
+
+### Installation
+
+**OpenCode Plugin Directory**:
+```bash
+cp -r /path/to/ccd/packages/ccd-plugin/.opencode ~/.config/opencode/
+```
+
+**Auto-Loading**:
+- OpenCode loads plugins from `~/.config/opencode/plugins/` or `.opencode/plugins/`
+- No manual configuration required
+
+### Key Differences from Claude Code Hooks
+
+| Aspect | Claude Code Hooks | OpenCode Plugin |
+|--------|------------------|------------------|
+| Trigger | Hook JSON input | Plugin event system |
+| Token Data | Transcript parsing | Direct from message.tokens |
+| Server Start | Shell script | Fetch-based health check |
+| Content Extraction | Full transcript | TextPart only (simplified) |
+
+### Future Enhancements
+
+- [ ] Support for complete part content (not just TextPart)
+- [ ] Token caching tracking (tokens.cache.read/write)
+- [ ] Better error handling and retry logic
+- [ ] File change tracking via `file.edited` event
+- [ ] Tool execution tracking via `tool.execute.after`
 
 ---
 

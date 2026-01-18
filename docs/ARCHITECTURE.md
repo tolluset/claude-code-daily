@@ -33,7 +33,8 @@ A 3-component system that automatically tracks, stores, and visualizes Claude Co
 | Server Runtime | Bun | Latest |
 | Server Framework | Hono | Latest |
 | Database | SQLite (Bun built-in) | Latest |
-| Plugin | Shell scripts + Claude Code Hooks | Latest |
+| Plugin (Claude Code) | Shell scripts + Claude Code Hooks | Latest |
+| Plugin (OpenCode) | @opencode-ai/plugin + TypeScript | Latest |
 | MCP | @modelcontextprotocol/sdk + Zod | Latest |
 | Dashboard | React + Vite + TailwindCSS | Latest |
 | State Management | TanStack Query | Latest |
@@ -99,6 +100,7 @@ CREATE TABLE sessions (
     cwd TEXT NOT NULL,
     project_name TEXT,
     git_branch TEXT,
+    source TEXT DEFAULT 'claude',    -- 'claude' or 'opencode'
     started_at DATETIME NOT NULL,
     ended_at DATETIME,
     is_bookmarked BOOLEAN DEFAULT FALSE,
@@ -128,10 +130,47 @@ CREATE TABLE daily_stats (
     total_output_tokens INTEGER DEFAULT 0
 );
 
+-- Full-Text Search tables (FTS5)
+CREATE VIRTUAL TABLE messages_fts USING fts5(
+    content,
+    session_id UNINDEXED,
+    type UNINDEXED,
+    timestamp UNINDEXED,
+    tokenize='porter unicode61'
+);
+
+CREATE VIRTUAL TABLE sessions_fts USING fts5(
+    summary,
+    bookmark_note,
+    session_id UNINDEXED,
+    project_name UNINDEXED,
+    is_bookmarked UNINDEXED,
+    started_at UNINDEXED,
+    tokenize='porter unicode61'
+);
+
 -- Indexes
 CREATE INDEX idx_sessions_date ON sessions(date(started_at));
 CREATE INDEX idx_sessions_bookmarked ON sessions(is_bookmarked);
 CREATE INDEX idx_messages_session ON messages(session_id);
+
+-- Triggers for automatic FTS sync
+CREATE TRIGGER messages_ai AFTER INSERT ON messages BEGIN
+  INSERT INTO messages_fts(rowid, content, session_id, type, timestamp)
+  VALUES (new.id, new.content, new.session_id, new.type, new.timestamp);
+END;
+
+CREATE TRIGGER sessions_ai AFTER INSERT ON sessions BEGIN
+  INSERT INTO sessions_fts(rowid, summary, bookmark_note, session_id, project_name, is_bookmarked, started_at)
+  VALUES (new.rowid, new.summary, new.bookmark_note, new.id, new.project_name, new.is_bookmarked, new.started_at);
+END;
+
+CREATE TRIGGER sessions_au AFTER UPDATE ON sessions BEGIN
+  UPDATE sessions_fts
+  SET summary = new.summary, bookmark_note = new.bookmark_note,
+      is_bookmarked = new.is_bookmarked, project_name = new.project_name
+  WHERE rowid = new.rowid;
+END;
 ```
 
 **Storage Location**: `~/.ccd/ccd.db`
@@ -142,20 +181,101 @@ CREATE INDEX idx_messages_session ON messages(session_id);
 
 ```
 Claude Code Session Start
-        │
-        ├─→ SessionStart Hook → Start server (if needed) → Register session
-        │
-        ├─→ UserPromptSubmit Hook → Save user message
-        │
-        └─→ Stop Hook → Parse transcript → Save assistant response + tokens
-                │
-                ▼
-          SQLite DB (~/.ccd/ccd.db)
-                │
-        ┌───────┴───────┬───────────┐
-        ▼               ▼           ▼
-    Dashboard         MCP       External
-    (React)          (LLM)       (API)
+         │
+         ├─→ SessionStart Hook → Start server (if needed) → Register session
+         │
+         ├─→ UserPromptSubmit Hook → Save user message
+         │
+         └─→ Stop Hook → Parse transcript → Save assistant response + tokens
+                 │
+                 ▼
+           SQLite DB (~/.ccd/ccd.db)
+                 │
+         ┌───────┴───────┬───────────┐
+         ▼               ▼           ▼
+     Dashboard         MCP       External
+     (React)          (LLM)       (API)
+```
+
+### OpenCode Plugin Architecture
+
+OpenCode uses a plugin-based event system for session tracking. The plugin subscribes to real-time events and sends data to the CCD Server.
+
+```
+OpenCode Session
+         │
+         ├─→ session.created event → Start server (if needed) → Register session
+         │
+         ├─→ message.updated event → Save user/assistant messages
+         │
+         └─→ session.idle event → End session
+                 │
+                 ▼
+           SQLite DB (~/.ccd/ccd.db)
+                 │
+         ┌───────┴───────────┬───────────┐
+         ▼               ▼           ▼
+     Dashboard         CCD API       OpenCode
+     (React)          (Port 3847)     (Plugin)
+```
+
+#### Event Mapping
+
+| Claude Code Hook | OpenCode Event | Purpose |
+|-----------------|----------------|---------|
+| SessionStart | session.created | Register session |
+| UserPromptSubmit | message.updated (role='user') | Save user message |
+| Stop | message.updated (role='assistant') | Save assistant message + tokens |
+| (none) | session.idle | End session |
+
+#### Plugin Location
+
+- **File**: `packages/ccd-plugin/.opencode/plugins/ccd-tracker.ts`
+- **Auto-loaded** by OpenCode from `~/.config/opencode/plugins/`
+- **Dependencies**: `@opencode-ai/plugin` (provided by OpenCode)
+
+#### Data Processing
+
+1. **Session Creation**:
+   - Extract `session.id`, `session.path`, `session.directory`
+   - Server health check + start if needed
+   - Register with `source='opencode'`
+
+2. **Message Tracking**:
+   - User messages: Extract `TextPart` content only (Option 2a)
+   - Assistant messages: Extract `TextPart` content + tokens
+   - First user message used as session summary (Option 3a)
+
+3. **Session End**:
+   - Update `ended_at` timestamp
+   - Clear message cache
+
+---
+
+## Background Cleanup
+
+**Empty Session Removal** (P7-004):
+- Triggered on server startup and API requests
+- Sessions without messages are deleted
+- Daily stats are decremented for affected dates
+- Interval: Every 1 hour of user activity
+
+**Implementation**:
+```typescript
+function performScheduledClean() {
+  if (now - lastCleanupTime < CLEANUP_INTERVAL_MS) return;
+
+  const result = cleanEmptySessions();
+  // Returns: { deleted: string[], dates: string[] }
+  // Deletes sessions with no messages, decrements daily_stats.session_count
+}
+
+// Called in API middleware
+app.use('/api/*', (c, next) => {
+  performScheduledClean();
+  resetIdleTimer();
+  return next();
+});
 ```
 
 ---

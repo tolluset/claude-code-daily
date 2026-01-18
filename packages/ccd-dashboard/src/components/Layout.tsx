@@ -1,10 +1,12 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, BarChart3, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Sessions', href: '/sessions', icon: MessageSquare }
+  { name: 'Sessions', href: '/sessions', icon: MessageSquare },
+  { name: 'Search', href: '/search', icon: Search },
+  { name: 'Reports', href: '/reports', icon: BarChart3 }
 ];
 
 export function Layout() {

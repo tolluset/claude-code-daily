@@ -1,5 +1,6 @@
-// Re-export API utilities
+// Re-export API utilities and constants
 export { API_BASE, fetchApi, checkServerHealth } from './api';
+export * from './constants';
 
 // Session types
 export interface Session {
@@ -13,6 +14,7 @@ export interface Session {
   is_bookmarked: boolean;
   bookmark_note: string | null;
   summary: string | null;
+  source: 'claude' | 'opencode';
 }
 
 export interface CreateSessionRequest {
@@ -21,6 +23,11 @@ export interface CreateSessionRequest {
   cwd: string;
   project_name?: string;
   git_branch?: string;
+  source?: 'claude' | 'opencode';
+}
+
+export interface UpdateSessionRequest {
+  summary?: string;
 }
 
 // Message types
@@ -78,6 +85,29 @@ export interface TodayStatsResponse {
   sessions: Session[];
 }
 
+// Search types
+export interface SearchResult {
+  session_id: string;
+  message_id: number | null;
+  content: string;
+  snippet: string;
+  type: 'message' | 'session_summary' | 'bookmark_note';
+  score: number;
+  timestamp: string;
+  project_name: string | null;
+  is_bookmarked: boolean;
+}
+
+export interface SearchOptions {
+  query: string;
+  from?: string;
+  to?: string;
+  project?: string;
+  bookmarkedOnly?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
 // Bookmark types
 export interface BookmarkRequest {
   note?: string;
@@ -117,4 +147,28 @@ export interface HookContext {
   transcript_path: string;
   cwd: string;
   prompt?: string;
+}
+
+export interface OpenCodeSessionCreatedEvent {
+  session: {
+    id: string;
+    path: string;
+    directory?: string;
+    started_at: number;
+  };
+}
+
+export interface OpenCodeMessageUpdatedEvent {
+  message: {
+    id: string;
+    sessionID: string;
+    role: 'user' | 'assistant';
+    parts?: Array<{ type: string; text?: string }>;
+    modelID?: string;
+    providerID?: string;
+    tokens?: {
+      input: number;
+      output: number;
+    };
+  };
 }

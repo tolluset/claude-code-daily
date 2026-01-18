@@ -25,15 +25,18 @@ ccd/
 
 | File | Status | Description |
 |------|--------|-------------|
-| `src/index.ts` | ✅ | Hono server entry point, CORS, route registration |
+| `src/index.ts` | ✅ | Hono server entry point, CORS, route registration, periodic cleanup |
 | `src/db/index.ts` | ✅ | SQLite connection and initialization |
-| `src/db/queries.ts` | ✅ | CRUD query functions |
+| `src/db/queries.ts` | ✅ | CRUD query functions, searchSessions(), cleanEmptySessions() |
 | `src/db/schema.sql` | ✅ | Table schema definition |
+| `src/db/migrations.ts` | ✅ | Database migration system with FTS5 support |
 | `src/routes/health.ts` | ✅ | Health check endpoint |
 | `src/routes/sessions.ts` | ✅ | Session CRUD + bookmark |
 | `src/routes/messages.ts` | ✅ | Message save/query |
-| `src/routes/stats.ts` | ✅ | Statistics query |
-| `src/routes/sync.ts` | ✅ | Transcript parsing and sync |
+| `src/routes/stats.ts` | ✅ | Statistics query (today + daily) |
+| `src/routes/sync.ts` | ✅ | Transcript parsing and sync, empty session deletion |
+| `src/routes/search.ts` | ✅ | Full-text search endpoint |
+| `src/routes/__tests__/*.test.ts` | ✅ | Unit & integration tests (29 tests) |
 | `src/utils/pid.ts` | ✅ | PID file management |
 | `src/utils/timeout.ts` | ✅ | Idle timeout (1 hour) |
 | `src/utils/params.ts` | ✅ | Query parameter parsing |
@@ -57,15 +60,21 @@ ccd/
 | File | Status | Description |
 |------|--------|-------------|
 | `src/main.tsx` | ✅ | React entry point |
-| `src/App.tsx` | ✅ | Router setup |
+| `src/App.tsx` | ✅ | Router setup (Dashboard, Sessions, Reports, Search) |
 | `src/lib/api.ts` | ✅ | TanStack Query + API client |
 | `src/lib/utils.ts` | ✅ | Utility functions |
-| `src/components/Layout.tsx` | ✅ | Common layout |
+| `src/components/Layout.tsx` | ✅ | Common layout with navigation |
 | `src/components/ui/Card.tsx` | ✅ | Card component |
 | `src/components/ui/IconButton.tsx` | ✅ | Icon button component with variants |
+| `src/components/ui/DateRangePicker.tsx` | ✅ | Date range selection component |
+| `src/components/ui/TokenTrendChart.tsx` | ✅ | Line chart for token usage trends |
+| `src/components/ui/SessionBarChart.tsx` | ✅ | Bar chart for session counts |
+| `src/components/ui/DiffView.tsx` | ✅ | Code diff visualization component |
 | `src/pages/Dashboard.tsx` | ✅ | Main dashboard (stats + recent sessions) |
-| `src/pages/Sessions.tsx` | ✅ | Session list page |
-| `src/pages/SessionDetail.tsx` | ✅ | Session detail page |
+| `src/pages/Sessions.tsx` | ✅ | Session list with filters (date, project) |
+| `src/pages/SessionDetail.tsx` | ✅ | Session detail with delete button |
+| `src/pages/Reports.tsx` | ✅ | Reports page with charts and filters |
+| `src/pages/Search.tsx` | ✅ | Full-text search page with result highlighting |
 
 ### CCD MCP (packages/ccd-mcp)
 
@@ -96,8 +105,9 @@ ccd/
 | POST | /api/v1/messages | ✅ |
 | GET | /api/v1/sessions/:id/messages | ✅ |
 | GET | /api/v1/stats/today | ✅ |
+| GET | /api/v1/stats/daily | ✅ |
 | POST | /api/v1/sync/transcript | ✅ |
-| GET | /api/v1/stats/daily | ⬜ Phase 2 |
+| GET | /api/v1/search | ✅ |
 
 ---
 
@@ -107,6 +117,7 @@ ccd/
 |------|--------|-------------|
 | open_dashboard | ✅ | Opens dashboard in browser |
 | get_stats | ✅ | Returns session statistics by period |
+| search_sessions | ✅ | Full-text search across sessions and messages |
 
 ---
 
@@ -122,13 +133,31 @@ ccd/
 ## Development Log
 
 ### 2026-01-19
+- ✅ **Phase 10: Full-Text Search** - Complete search feature with FTS5
+  - Database: FTS5 migration (003_add_fts_search)
+  - Backend: searchSessions() with BM25 ranking
+  - API: GET /api/v1/search endpoint
+  - Frontend: Search page with filters and result highlighting
+  - MCP: search_sessions tool
+  - Types: SearchResult, SearchOptions interfaces
+  - See: docs/SEARCH_IMPLEMENTATION.md
+- ✅ **Phase 8: Testing** - 29 tests passing
+  - Unit tests for all server routes (22 tests)
+  - Integration tests for API workflows (7 tests)
+  - Separate test database configuration
+- ✅ **Phase 5-6: Statistics & Filtering**
+  - Daily stats API with date range support
+  - Recharts integration (TokenTrendChart, SessionBarChart)
+  - Reports page with charts
+  - Session/Reports filtering (date, project, bookmarked)
+  - DateRangePicker component
+- ✅ **Phase 7: Infrastructure**
+  - Schema migration system (P7-002)
+  - Scheduled empty session cleanup (P7-004)
 - ✅ MCP server implementation (`open_dashboard`, `get_stats`)
 - ✅ Session summary feature (first user message extraction)
-- ✅ Phase 2 planning (gap analysis, implementation plan)
-- ✅ Documentation update and refactoring
 - ✅ SessionDetail page: Add delete button with confirmation dialog
-- ✅ Empty session prevention (auto-delete sessions without user messages)
-- ✅ IconButton component: Common button component with variants (default, destructive, ghost)
+- ✅ IconButton component: Common button component with variants
 
 ### 2026-01-18
 - ✅ Initial infrastructure (monorepo, server, plugin, dashboard)
@@ -141,5 +170,14 @@ ccd/
 See [TASKS.md](TASKS.md) for detailed task management.
 
 Immediate priorities:
-- Commit pending changes (v0.1.0)
-- Phase 5: Enhanced Statistics (daily stats API, charts)
+1. **C-001**: Commit v0.1.0 release (includes Phase 5, 6, 8, 10)
+2. **P5-008**: Create ProjectPieChart component (Phase 5 completion)
+3. **P7-001**: Dashboard production build setup
+4. **P8-002**: Add E2E tests for hooks
+5. **C-002**: Update README with latest features
+
+**Recent Achievements**:
+- ✅ Phase 10 (Full-Text Search): Complete FTS5-based search
+- ✅ Phase 6 (Enhanced Filtering): All filters implemented
+- ✅ Phase 8 (Testing): 29 tests passing
+- 🚧 Phase 5 (Statistics): 90% complete (ProjectPieChart pending)

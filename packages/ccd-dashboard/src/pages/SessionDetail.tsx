@@ -40,7 +40,7 @@ export function SessionDetail() {
   };
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(session.id);
+    navigator.clipboard.writeText(`/resume ${session.id}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -151,11 +151,11 @@ export function SessionDetail() {
                 <div className="space-y-2">
                   <div>
                     <span className="text-muted-foreground">Terminal:</span>
-                    <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">claude --resume {'{session-id}'}</code>
+                    <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">claude --resume &lt;session_id&gt;</code>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Claude Code:</span>
-                    <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">/resume {'{session-id}'}</code>
+                    <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">/resume &lt;session_id&gt;</code>
                   </div>
                 </div>
               </div>

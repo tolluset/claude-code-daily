@@ -10,11 +10,14 @@ import { sessions } from './routes/sessions';
 import { messages } from './routes/messages';
 import { stats } from './routes/stats';
 import { sync } from './routes/sync';
+import { search } from './routes/search';
 import { resetIdleTimer, getIdleTimeMs } from './utils/timeout';
 import { writePidFile, isServerRunning } from './utils/pid';
 import { DATA_DIR, DB_PATH } from './db';
+import { cleanEmptySessions } from './db/queries';
+import { apiErrorHandler } from './utils/responses';
+import { SERVER_PORT, DEFAULT_CLEANUP_INTERVAL_MS } from '@ccd/types';
 
-const PORT = 3847;
 const IS_DEV = process.env.NODE_ENV === 'development' || process.argv.includes('--watch');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -55,11 +58,39 @@ if (!IS_DEV) {
   writePidFile();
 }
 
+// Clean empty sessions on startup and on user activity
+let lastCleanupTime = Date.now();
+
+function performScheduledClean() {
+  const now = Date.now();
+  if (now - lastCleanupTime < DEFAULT_CLEANUP_INTERVAL_MS) {
+    return;
+  }
+
+  try {
+    const result = cleanEmptySessions();
+    if (result.deleted.length > 0) {
+      console.log(`[CCD Server] Cleaned ${result.deleted.length} empty session(s): ${result.deleted.join(', ')}`);
+    }
+    lastCleanupTime = now;
+  } catch (error) {
+    console.error('[CCD Server] Error cleaning empty sessions:', error);
+  }
+}
+
 const app = new Hono();
 
 // Middleware
 app.use('*', cors());
 app.use('*', logger());
+
+// API middleware
+app.use('/api/*', apiErrorHandler());
+app.use('/api/*', (c, next) => {
+  performScheduledClean();
+  resetIdleTimer();
+  return next();
+});
 
 // API routes (must be defined first)
 app.route('/api/v1/health', health);
@@ -67,12 +98,7 @@ app.route('/api/v1/sessions', sessions);
 app.route('/api/v1/messages', messages);
 app.route('/api/v1/stats', stats);
 app.route('/api/v1/sync', sync);
-
-// Reset timer on each API request
-app.use('/api/*', (c, next) => {
-  resetIdleTimer();
-  return next();
-});
+app.route('/api/v1/search', search);
 
 // Dashboard static files
 app.get('/', (c) => {
@@ -100,12 +126,12 @@ app.get('/*', (c) => {
 });
 
 // Start server
-console.log(`[CCD Server] Starting on http://localhost:${PORT}`);
+console.log(`[CCD Server] Starting on http://localhost:${SERVER_PORT}`);
 console.log(`[CCD Server] Data directory: ${DATA_DIR}`);
 console.log(`[CCD Server] Database: ${DB_PATH}`);
 console.log(`[CCD Server] Dashboard: ${DASHBOARD_DIR}`);
 
 export default {
-  port: PORT,
+  port: SERVER_PORT,
   fetch: app.fetch.bind(app)
 };

@@ -33,10 +33,10 @@ if curl -s --connect-timeout 2 "$CCD_SERVER_URL/api/v1/health" > /dev/null 2>&1;
     SERVER_RUNNING=true
 fi
 
-# 2. Start server with npx if not running
+# 2. Start server with bun if not running
 if [ "$SERVER_RUNNING" = false ]; then
     mkdir -p "$CCD_DATA_DIR"
-    nohup npx -y ccd-server > "$CCD_DATA_DIR/server.log" 2>&1 &
+    nohup bun run /Users/bh/workspaces/ccd/packages/ccd-server/src/index.ts > "$CCD_DATA_DIR/server.log" 2>&1 &
     sleep 2
 fi
 

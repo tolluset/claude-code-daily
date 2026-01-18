@@ -1,17 +1,30 @@
 import { useSessions, toggleBookmark, deleteSession } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { formatDate, formatTime } from '@/lib/utils';
-import { Star, GitBranch, Clock, Copy, Check, Trash2, HelpCircle } from 'lucide-react';
+import { Star, GitBranch, Clock, Copy, Check, Trash2, HelpCircle, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@ccd/types';
 
 export function Sessions() {
-  const { data, isLoading, error } = useSessions();
   const queryClient = useQueryClient();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+
+  const { data: allData } = useSessions();
+  const { data, isLoading, error } = useSessions(
+    undefined,
+    dateRange.from ? formatDate(dateRange.from.toISOString()) : undefined,
+    dateRange.to ? formatDate(dateRange.to.toISOString()) : undefined,
+    selectedProject || undefined
+  );
+
+  const allSessions = allData?.sessions || [];
+  const projects = Array.from(new Set(allSessions.map(s => s.project_name).filter((p): p is string => Boolean(p)))).sort();
 
   if (isLoading) {
     return (
@@ -47,7 +60,7 @@ export function Sessions() {
   const handleCopyId = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    navigator.clipboard.writeText(id);
+    navigator.clipboard.writeText(`/resume ${id}`);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -66,9 +79,29 @@ export function Sessions() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Sessions</h1>
-        <p className="text-muted-foreground">{today} · {sessions.length} sessions</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Sessions</h1>
+          <p className="text-muted-foreground">{today} · {sessions.length} sessions</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
+          {projects.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                <option value="">All Projects</option>
+                {projects.map((project) => (
+                  <option key={project} value={project}>{project}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {bookmarked.length > 0 && (
@@ -221,11 +254,11 @@ function SessionItem({ session, onBookmark, onCopyId, onDelete, copiedId }: Sess
             <div className="space-y-2">
               <div>
                 <span className="text-muted-foreground">Terminal:</span>
-                <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">claude --resume {'{session-id}'}</code>
+                <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">claude --resume &lt;session_id&gt;</code>
               </div>
               <div>
                 <span className="text-muted-foreground">Claude Code:</span>
-                <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">/resume {'{session-id}'}</code>
+                <code className="ml-1 bg-muted px-1.5 py-0.5 rounded">/resume &lt;session_id&gt;</code>
               </div>
             </div>
           </div>

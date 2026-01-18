@@ -3,5 +3,6 @@ dist/
 .turbo/
 
 .serena/
+.opencode
 
 logs/
