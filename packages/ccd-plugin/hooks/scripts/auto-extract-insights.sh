@@ -4,6 +4,7 @@
 
 SESSION_ID="$1"
 LOG_FILE="$HOME/.ccd/auto-extract.log"
+CCD_SERVER_URL="http://localhost:3847"
 
 # Ensure log directory exists
 mkdir -p "$HOME/.ccd"
@@ -19,6 +20,18 @@ if [ -f "$CONFIG_FILE" ]; then
         exit 0
     fi
 fi
+
+# Check if session has actually ended
+echo "[$(date)] Checking if session has ended..." >> "$LOG_FILE"
+SESSION_INFO=$(curl -s "$CCD_SERVER_URL/api/v1/sessions/$SESSION_ID" 2>&1)
+ENDED_AT=$(echo "$SESSION_INFO" | jq -r '.data.ended_at // null' 2>/dev/null)
+
+if [ "$ENDED_AT" = "null" ] || [ -z "$ENDED_AT" ]; then
+    echo "[$(date)] Session still active (ended_at is null), skipping auto-extract" >> "$LOG_FILE"
+    exit 0
+fi
+
+echo "[$(date)] Session ended at $ENDED_AT, proceeding with auto-extract" >> "$LOG_FILE"
 
 # Check if claude command exists
 if ! command -v claude &> /dev/null; then
