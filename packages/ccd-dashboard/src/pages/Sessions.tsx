@@ -2,10 +2,14 @@ import { useSessions } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
-import { formatDate, formatTime, formatDateForApi, extractProjectList } from '@/lib/utils';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { formatDate, formatTime, extractProjectList } from '@/lib/utils';
+import { buildQueryParams } from '@/lib/query-params';
+import { useDateRangeFilter } from '@/hooks/useDateRangeFilter';
 import { Bookmark, GitBranch, Clock, Copy, Check, Trash2, Filter } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useState, memo } from 'react';
+import { useState, memo, useMemo } from 'react';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import { ResumeHelpTooltip } from '@/components/ui/ResumeHelpTooltip';
 import type { Session } from '@ccd/types';
@@ -15,49 +19,39 @@ export function Sessions() {
   const [selectedProject, setSelectedProject] = useState<string>(() => {
     return searchParams.get('project') || '';
   });
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => {
-    const fromParam = searchParams.get('from');
-    const toParam = searchParams.get('to');
-    
-    if (fromParam && toParam) {
-      return {
-        from: new Date(fromParam),
-        to: new Date(toParam)
-      };
-    }
-    
-    return {};
-  });
+  const { dateRange, updateDateRange } = useDateRangeFilter();
 
-  const { data: allData } = useSessions();
+  const { data: allData, error } = useSessions();
   const { handleBookmark, handleCopyId, handleDelete, copiedId } = useSessionActions();
-  const { data, error } = useSessions(
-    undefined,
-    dateRange.from ? formatDateForApi(dateRange.from) : undefined,
-    dateRange.to ? formatDateForApi(dateRange.to) : undefined,
-    selectedProject || undefined
-  );
+
+  const filteredSessions = useMemo(() => {
+    if (!allData) return [];
+    let result = allData.sessions;
+
+    const { from, to } = dateRange;
+    if (from && to) {
+      result = result.filter(s => {
+        const date = new Date(s.started_at);
+        return date >= from && date <= to;
+      });
+    }
+
+    if (selectedProject) {
+      result = result.filter(s => s.project_name === selectedProject);
+    }
+
+    return result;
+  }, [allData, dateRange, selectedProject]);
 
   if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="text-destructive">Cannot connect to server</div>
-        <div className="text-sm text-muted-foreground">
-          The server will start automatically when you start a Claude Code session.
-        </div>
-      </div>
-    );
+    return <ErrorState />;
   }
 
-  if (!data) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
+  if (!allData) {
+    return <LoadingState />;
   }
 
-  const { sessions } = data;
+  const sessions = filteredSessions;
   const today = formatDate(new Date().toISOString());
 
   const allSessions = allData?.sessions || [];
@@ -74,21 +68,7 @@ export function Sessions() {
           <DateRangePicker
             value={dateRange}
             onChange={(value) => {
-              setDateRange(value);
-              const newSearchParams = new URLSearchParams(searchParams);
-              if (value.from && value.to) {
-                newSearchParams.set('from', formatDateForApi(value.from));
-                newSearchParams.set('to', formatDateForApi(value.to));
-              } else {
-                newSearchParams.delete('from');
-                newSearchParams.delete('to');
-              }
-              if (selectedProject) {
-                newSearchParams.set('project', selectedProject);
-              } else {
-                newSearchParams.delete('project');
-              }
-              setSearchParams(newSearchParams, { replace: true });
+              updateDateRange(value);
             }}
           />
           {projects.length > 0 && (
@@ -98,20 +78,12 @@ export function Sessions() {
                 value={selectedProject}
                 onChange={(e) => {
                   setSelectedProject(e.target.value);
-                  const newSearchParams = new URLSearchParams(searchParams);
-                  if (dateRange.from && dateRange.to) {
-                    newSearchParams.set('from', formatDateForApi(dateRange.from));
-                    newSearchParams.set('to', formatDateForApi(dateRange.to));
-                  } else {
-                    newSearchParams.delete('from');
-                    newSearchParams.delete('to');
-                  }
-                  if (e.target.value) {
-                    newSearchParams.set('project', e.target.value);
-                  } else {
-                    newSearchParams.delete('project');
-                  }
-                  setSearchParams(newSearchParams, { replace: true });
+                  const params = buildQueryParams(searchParams, {
+                    from: dateRange.from,
+                    to: dateRange.to,
+                    project: e.target.value
+                  });
+                  setSearchParams(params, { replace: true });
                 }}
                 className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
               >
@@ -209,7 +181,7 @@ export const SessionItem = memo(function SessionItem({ session, onBookmark, onCo
             )}
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {formatTime(session.started_at)}
+              {formatDate(session.started_at)} {formatTime(session.started_at)}
             </span>
             {session.bookmark_note && (
               <span className="text-yellow-600 truncate">{session.bookmark_note}</span>

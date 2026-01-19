@@ -7,6 +7,7 @@ import type {
   Session,
   Message,
   DailyStats,
+  SessionInsight,
   CreateSessionRequest,
   CreateMessageRequest,
   SearchResult,
@@ -55,6 +56,70 @@ export function getSessions(options: {
   const { query, params } = QueryBuilder.buildSessionQuery(options);
   const stmt = db.prepare(query);
   return stmt.all(...params) as Session[];
+}
+
+export function getSessionsWithInsights(options: {
+  date?: string;
+  from?: string;
+  to?: string;
+  project?: string;
+  limit?: number;
+  offset?: number;
+  bookmarkedFirst?: boolean;
+  bookmarkedOnly?: boolean;
+}): Array<Session & { insight: SessionInsight | null }> {
+  const { query: baseQuery, params } = QueryBuilder.buildSessionQuery(options);
+
+  const query = baseQuery.replace(
+    'SELECT * FROM sessions',
+    `SELECT
+      s.*,
+      si.id as insight_id,
+      si.session_id as insight_session_id,
+      si.summary as insight_summary,
+      si.key_learnings as insight_key_learnings,
+      si.problems_solved as insight_problems_solved,
+      si.code_patterns as insight_code_patterns,
+      si.technologies as insight_technologies,
+      si.difficulty as insight_difficulty,
+      si.generated_at as insight_generated_at,
+      si.user_notes as insight_user_notes
+    FROM sessions s
+    LEFT JOIN session_insights si ON s.id = si.session_id`
+  );
+
+  const stmt = db.prepare(query);
+  const rows = stmt.all(...params) as Record<string, unknown>[];
+
+  return rows.map(row => {
+    const insight = row.insight_session_id ? {
+      id: row.insight_id as number,
+      session_id: row.insight_session_id as string,
+      summary: row.insight_summary as string | null,
+      key_learnings: row.insight_key_learnings ? JSON.parse(row.insight_key_learnings as string) : [],
+      problems_solved: row.insight_problems_solved ? JSON.parse(row.insight_problems_solved as string) : [],
+      code_patterns: row.insight_code_patterns ? JSON.parse(row.insight_code_patterns as string) : [],
+      technologies: row.insight_technologies ? JSON.parse(row.insight_technologies as string) : [],
+      difficulty: row.insight_difficulty as ('easy' | 'medium' | 'hard' | null),
+      generated_at: row.insight_generated_at as string,
+      user_notes: row.insight_user_notes as string | null
+    } : null;
+
+    return {
+      id: row.id as string,
+      transcript_path: row.transcript_path as string,
+      cwd: row.cwd as string,
+      project_name: row.project_name as string | null,
+      git_branch: row.git_branch as string | null,
+      started_at: row.started_at as string,
+      ended_at: row.ended_at as string | null,
+      is_bookmarked: row.is_bookmarked as boolean,
+      bookmark_note: row.bookmark_note as string | null,
+      summary: row.summary as string | null,
+      source: row.source as 'claude' | 'opencode',
+      insight
+    };
+  });
 }
 
 export function getTodaySessions(): Session[] {
@@ -274,14 +339,17 @@ export function decrementSessionCount(date?: string): void {
   stmt.run(targetDate);
 }
 
-export function cleanEmptySessions(): { deleted: string[]; sessions: string[] } {
+export function cleanEmptySessions(minAgeMs: number = 0): { deleted: string[]; sessions: string[] } {
+  const minAgeSeconds = minAgeMs / 1000;
+
   const findEmptySessionsStmt = db.prepare(`
     SELECT id, date(started_at) as date
     FROM sessions
     WHERE id NOT IN (SELECT DISTINCT session_id FROM messages)
+      AND (unixepoch('now') - unixepoch(started_at)) >= ?
   `);
 
-  const emptySessions = findEmptySessionsStmt.all() as { id: string; date: string }[];
+  const emptySessions = findEmptySessionsStmt.all(minAgeSeconds) as { id: string; date: string }[];
   const deleted: string[] = [];
   const dates: string[] = [];
 
@@ -463,14 +531,14 @@ function daysDifference(date1: string, date2: string): number {
 }
 
 // Session Insights functions
-export interface SessionInsight {
+interface DbSessionInsight {
   id: number;
   session_id: string;
   summary: string | null;
-  key_learnings: string | null;  // JSON array
-  problems_solved: string | null; // JSON array
-  code_patterns: string | null;  // JSON array
-  technologies: string | null;   // JSON array
+  key_learnings: string | null;
+  problems_solved: string | null;
+  code_patterns: string | null;
+  technologies: string | null;
   difficulty: 'easy' | 'medium' | 'hard' | null;
   generated_at: string;
   user_notes: string | null;
@@ -487,13 +555,13 @@ export interface CreateInsightRequest {
   user_notes?: string;
 }
 
-export function getSessionInsight(sessionId: string): SessionInsight | null {
+export function getSessionInsight(sessionId: string): DbSessionInsight | null {
   const stmt = db.prepare(`
     SELECT * FROM session_insights
     WHERE session_id = ?
   `);
 
-  return stmt.get(sessionId) as SessionInsight | null;
+  return stmt.get(sessionId) as DbSessionInsight | null;
 }
 
 export function createOrUpdateInsight(data: CreateInsightRequest): SessionInsight {
@@ -530,7 +598,19 @@ export function createOrUpdateInsight(data: CreateInsightRequest): SessionInsigh
     data.user_notes || null
   );
 
-  return getSessionInsight(data.session_id)!;
+  const dbInsight = getSessionInsight(data.session_id)!;
+  return {
+    id: dbInsight.id,
+    session_id: dbInsight.session_id,
+    summary: dbInsight.summary,
+    key_learnings: dbInsight.key_learnings ? JSON.parse(dbInsight.key_learnings) : [],
+    problems_solved: dbInsight.problems_solved ? JSON.parse(dbInsight.problems_solved) : [],
+    code_patterns: dbInsight.code_patterns ? JSON.parse(dbInsight.code_patterns) : [],
+    technologies: dbInsight.technologies ? JSON.parse(dbInsight.technologies) : [],
+    difficulty: dbInsight.difficulty,
+    generated_at: dbInsight.generated_at,
+    user_notes: dbInsight.user_notes
+  };
 }
 
 export function updateInsightNotes(sessionId: string, notes: string): void {
@@ -556,5 +636,17 @@ export function getRecentInsights(limit: number = 10): SessionInsight[] {
     LIMIT ?
   `);
 
-  return stmt.all(limit) as SessionInsight[];
+  const rows = stmt.all(limit) as DbSessionInsight[];
+  return rows.map(row => ({
+    id: row.id,
+    session_id: row.session_id,
+    summary: row.summary,
+    key_learnings: row.key_learnings ? JSON.parse(row.key_learnings) : [],
+    problems_solved: row.problems_solved ? JSON.parse(row.problems_solved) : [],
+    code_patterns: row.code_patterns ? JSON.parse(row.code_patterns) : [],
+    technologies: row.technologies ? JSON.parse(row.technologies) : [],
+    difficulty: row.difficulty,
+    generated_at: row.generated_at,
+    user_notes: row.user_notes
+  }));
 }

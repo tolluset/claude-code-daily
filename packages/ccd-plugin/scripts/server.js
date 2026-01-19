@@ -2053,6 +2053,53 @@ function getSessions(options) {
   const stmt = db.prepare(query);
   return stmt.all(...params);
 }
+function getSessionsWithInsights(options) {
+  const { query: baseQuery, params } = QueryBuilder.buildSessionQuery(options);
+  const query = baseQuery.replace("SELECT * FROM sessions", `SELECT
+      s.*,
+      si.id as insight_id,
+      si.session_id as insight_session_id,
+      si.summary as insight_summary,
+      si.key_learnings as insight_key_learnings,
+      si.problems_solved as insight_problems_solved,
+      si.code_patterns as insight_code_patterns,
+      si.technologies as insight_technologies,
+      si.difficulty as insight_difficulty,
+      si.generated_at as insight_generated_at,
+      si.user_notes as insight_user_notes
+    FROM sessions s
+    LEFT JOIN session_insights si ON s.id = si.session_id`);
+  const stmt = db.prepare(query);
+  const rows = stmt.all(...params);
+  return rows.map((row) => {
+    const insight = row.insight_session_id ? {
+      id: row.insight_id,
+      session_id: row.insight_session_id,
+      summary: row.insight_summary,
+      key_learnings: row.insight_key_learnings ? JSON.parse(row.insight_key_learnings) : [],
+      problems_solved: row.insight_problems_solved ? JSON.parse(row.insight_problems_solved) : [],
+      code_patterns: row.insight_code_patterns ? JSON.parse(row.insight_code_patterns) : [],
+      technologies: row.insight_technologies ? JSON.parse(row.insight_technologies) : [],
+      difficulty: row.insight_difficulty,
+      generated_at: row.insight_generated_at,
+      user_notes: row.insight_user_notes
+    } : null;
+    return {
+      id: row.id,
+      transcript_path: row.transcript_path,
+      cwd: row.cwd,
+      project_name: row.project_name,
+      git_branch: row.git_branch,
+      started_at: row.started_at,
+      ended_at: row.ended_at,
+      is_bookmarked: row.is_bookmarked,
+      bookmark_note: row.bookmark_note,
+      summary: row.summary,
+      source: row.source,
+      insight
+    };
+  });
+}
 function getTodaySessions() {
   const stmt = db.prepare(`
     SELECT * FROM sessions
@@ -2198,13 +2245,15 @@ function decrementSessionCount(date) {
   `);
   stmt.run(targetDate);
 }
-function cleanEmptySessions() {
+function cleanEmptySessions(minAgeMs = 0) {
+  const minAgeSeconds = minAgeMs / 1000;
   const findEmptySessionsStmt = db.prepare(`
     SELECT id, date(started_at) as date
     FROM sessions
     WHERE id NOT IN (SELECT DISTINCT session_id FROM messages)
+      AND (unixepoch('now') - unixepoch(started_at)) >= ?
   `);
-  const emptySessions = findEmptySessionsStmt.all();
+  const emptySessions = findEmptySessionsStmt.all(minAgeSeconds);
   const deleted = [];
   const dates = [];
   const deleteSessionStmt = db.prepare("DELETE FROM sessions WHERE id = ?");
@@ -2363,7 +2412,19 @@ function createOrUpdateInsight(data) {
       generated_at = CURRENT_TIMESTAMP
   `);
   stmt.run(data.session_id, data.summary || null, key_learnings, problems_solved, code_patterns, technologies, data.difficulty || null, data.user_notes || null);
-  return getSessionInsight(data.session_id);
+  const dbInsight = getSessionInsight(data.session_id);
+  return {
+    id: dbInsight.id,
+    session_id: dbInsight.session_id,
+    summary: dbInsight.summary,
+    key_learnings: dbInsight.key_learnings ? JSON.parse(dbInsight.key_learnings) : [],
+    problems_solved: dbInsight.problems_solved ? JSON.parse(dbInsight.problems_solved) : [],
+    code_patterns: dbInsight.code_patterns ? JSON.parse(dbInsight.code_patterns) : [],
+    technologies: dbInsight.technologies ? JSON.parse(dbInsight.technologies) : [],
+    difficulty: dbInsight.difficulty,
+    generated_at: dbInsight.generated_at,
+    user_notes: dbInsight.user_notes
+  };
 }
 function updateInsightNotes(sessionId, notes) {
   createOrUpdateInsight({
@@ -2384,7 +2445,19 @@ function getRecentInsights(limit = 10) {
     ORDER BY generated_at DESC
     LIMIT ?
   `);
-  return stmt.all(limit);
+  const rows = stmt.all(limit);
+  return rows.map((row) => ({
+    id: row.id,
+    session_id: row.session_id,
+    summary: row.summary,
+    key_learnings: row.key_learnings ? JSON.parse(row.key_learnings) : [],
+    problems_solved: row.problems_solved ? JSON.parse(row.problems_solved) : [],
+    code_patterns: row.code_patterns ? JSON.parse(row.code_patterns) : [],
+    technologies: row.technologies ? JSON.parse(row.technologies) : [],
+    difficulty: row.difficulty,
+    generated_at: row.generated_at,
+    user_notes: row.user_notes
+  }));
 }
 
 // src/utils/errors.ts
@@ -2950,24 +3023,10 @@ dailyReport.get("/", (c) => {
     total_input_cost: 0,
     total_output_cost: 0
   };
-  const sessions2 = getSessions({ date: targetDate });
-  const sessionsWithInsights = sessions2.map((session) => {
-    const insight = getSessionInsight(session.id);
-    if (insight) {
-      const parsedInsight = {
-        ...insight,
-        key_learnings: insight.key_learnings ? JSON.parse(insight.key_learnings) : [],
-        problems_solved: insight.problems_solved ? JSON.parse(insight.problems_solved) : [],
-        code_patterns: insight.code_patterns ? JSON.parse(insight.code_patterns) : [],
-        technologies: insight.technologies ? JSON.parse(insight.technologies) : []
-      };
-      return { ...session, insight: parsedInsight };
-    }
-    return { ...session, insight: null };
-  });
-  const bookmarkedCount = sessions2.filter((s) => s.is_bookmarked).length;
-  const projects = [...new Set(sessions2.map((s) => s.project_name).filter((p) => p !== null))];
-  const completedSessions = sessions2.filter((s) => s.ended_at !== null);
+  const sessionsWithInsights = getSessionsWithInsights({ date: targetDate });
+  const bookmarkedCount = sessionsWithInsights.filter((s) => s.is_bookmarked).length;
+  const projects = [...new Set(sessionsWithInsights.map((s) => s.project_name).filter((p) => p !== null))];
+  const completedSessions = sessionsWithInsights.filter((s) => s.ended_at !== null);
   let avgDuration = null;
   if (completedSessions.length > 0) {
     const totalMinutes = completedSessions.reduce((sum, s) => {
@@ -2984,7 +3043,7 @@ dailyReport.get("/", (c) => {
       stats: dailyStat,
       sessions: sessionsWithInsights,
       summary: {
-        total_sessions: sessions2.length,
+        total_sessions: sessionsWithInsights.length,
         total_messages: dailyStat.message_count,
         total_tokens: dailyStat.total_input_tokens + dailyStat.total_output_tokens,
         total_cost: dailyStat.total_input_cost + dailyStat.total_output_cost,
@@ -3138,6 +3197,7 @@ function setupApiMiddleware(app, performScheduledClean, resetIdleTimer) {
 var SERVER_PORT = 3847;
 var DEFAULT_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 var DEFAULT_IDLE_TIMEOUT_MS = 60 * 60 * 1000;
+var MIN_SESSION_AGE_BEFORE_CLEANUP_MS = 10 * 60 * 1000;
 // src/utils/timeout.ts
 var timeoutId = null;
 var lastActivity = Date.now();
@@ -3245,6 +3305,28 @@ function performScheduledClean() {
     console.error("[CCD Server] Error cleaning empty sessions:", error);
   }
 }
+var cleanupIntervalId = null;
+function startPeriodicCleanup() {
+  cleanupIntervalId = setInterval(() => {
+    try {
+      const result = cleanEmptySessions(MIN_SESSION_AGE_BEFORE_CLEANUP_MS);
+      if (result.deleted.length > 0) {
+        console.log(`[CCD Server] Periodic cleanup: Cleaned ${result.deleted.length} empty session(s) older than 10 minutes`);
+      }
+    } catch (error) {
+      console.error("[CCD Server] Error during periodic cleanup:", error);
+    }
+  }, DEFAULT_CLEANUP_INTERVAL_MS);
+  console.log(`[CCD Server] Periodic cleanup started (interval: ${DEFAULT_CLEANUP_INTERVAL_MS / 1000 / 60} minutes)`);
+}
+function stopPeriodicCleanup() {
+  if (cleanupIntervalId) {
+    clearInterval(cleanupIntervalId);
+    cleanupIntervalId = null;
+    console.log("[CCD Server] Periodic cleanup stopped");
+  }
+}
+startPeriodicCleanup();
 var app = new Hono2;
 setupGlobalMiddleware(app);
 setupApiMiddleware(app, performScheduledClean, resetIdleTimer);
@@ -3285,6 +3367,18 @@ var src_default = {
   port: SERVER_PORT,
   fetch: app.fetch.bind(app)
 };
+process.on("SIGINT", () => {
+  console.log(`
+[CCD Server] Shutting down gracefully...`);
+  stopPeriodicCleanup();
+  process.exit(0);
+});
+process.on("SIGTERM", () => {
+  console.log(`
+[CCD Server] Shutting down gracefully...`);
+  stopPeriodicCleanup();
+  process.exit(0);
+});
 export {
   src_default as default
 };

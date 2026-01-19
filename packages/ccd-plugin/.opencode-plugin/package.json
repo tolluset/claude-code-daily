@@ -1,0 +1,17 @@
+{
+  "name": "ccd-opencode-plugin",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "description": "OpenCode plugin for Claude Code Daily",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target bun --format esm",
+    "dev": "bun run src/index.ts",
+    "install-global": "bun run build && cp dist/index.js ~/.config/opencode/plugins/ccd.js"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.1.25",
+    "typescript": "^5.7.3"
+  }
+}

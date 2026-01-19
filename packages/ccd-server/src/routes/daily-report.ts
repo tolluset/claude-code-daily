@@ -1,10 +1,9 @@
 import { Hono } from 'hono';
 import {
   getDailyStats,
-  getSessions,
-  getSessionInsight
+  getSessionsWithInsights
 } from '../db/queries';
-import type { ApiResponse, DailyReportData, SessionInsight, Session } from '@ccd/types';
+import type { ApiResponse, DailyReportData } from '@ccd/types';
 
 const dailyReport = new Hono();
 
@@ -23,27 +22,12 @@ dailyReport.get('/', (c) => {
     total_output_cost: 0
   };
 
-  const sessions = getSessions({ date: targetDate });
+  const sessionsWithInsights = getSessionsWithInsights({ date: targetDate });
 
-  const sessionsWithInsights = sessions.map(session => {
-    const insight = getSessionInsight(session.id);
-    if (insight) {
-      const parsedInsight: SessionInsight = {
-        ...insight,
-        key_learnings: (insight.key_learnings ? JSON.parse(insight.key_learnings) : []) as string[],
-        problems_solved: (insight.problems_solved ? JSON.parse(insight.problems_solved) : []) as string[],
-        code_patterns: (insight.code_patterns ? JSON.parse(insight.code_patterns) : []) as string[],
-        technologies: (insight.technologies ? JSON.parse(insight.technologies) : []) as string[]
-      };
-      return { ...session, insight: parsedInsight };
-    }
-    return { ...session, insight: null };
-  });
+  const bookmarkedCount = sessionsWithInsights.filter(s => s.is_bookmarked).length;
+  const projects = [...new Set(sessionsWithInsights.map(s => s.project_name).filter((p): p is string => p !== null))];
 
-  const bookmarkedCount = sessions.filter(s => s.is_bookmarked).length;
-  const projects = [...new Set(sessions.map(s => s.project_name).filter((p): p is string => p !== null))];
-
-  const completedSessions = sessions.filter((s): s is Session & { ended_at: string } => s.ended_at !== null);
+  const completedSessions = sessionsWithInsights.filter((s): s is typeof s & { ended_at: string } => s.ended_at !== null);
   let avgDuration = null;
   if (completedSessions.length > 0) {
     const totalMinutes = completedSessions.reduce((sum, s) => {
@@ -61,7 +45,7 @@ dailyReport.get('/', (c) => {
       stats: dailyStat,
       sessions: sessionsWithInsights,
       summary: {
-        total_sessions: sessions.length,
+        total_sessions: sessionsWithInsights.length,
         total_messages: dailyStat.message_count,
         total_tokens: dailyStat.total_input_tokens + dailyStat.total_output_tokens,
         total_cost: dailyStat.total_input_cost + dailyStat.total_output_cost,

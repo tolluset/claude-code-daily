@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card';
 import { MessageContent } from '../components/MessageContent';
 import { useDebounce } from '../hooks/useDebounce';
 import { useSearchResults } from '../lib/api';
+import { buildQueryParams } from '../lib/query-params';
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,15 +29,16 @@ export function SearchPage() {
       return;
     }
     if (trimmedQuery) {
-      const params = new URLSearchParams();
-      params.set('q', trimmedQuery);
-      if (project) params.set('project', project);
-      if (bookmarkedOnly) params.set('bookmarked', 'true');
+      const params = buildQueryParams(searchParams, {
+        query: trimmedQuery,
+        project,
+        bookmarked: bookmarkedOnly
+      });
       setSearchParams(params, { replace: true });
     } else {
-      setSearchParams({}, { replace: true });
+      setSearchParams(new URLSearchParams(), { replace: true });
     }
-  }, [project, bookmarkedOnly, setSearchParams]);
+  }, [project, bookmarkedOnly, searchParams, setSearchParams]);
 
   const debouncedSearch = useDebounce<(value: string) => void>(performSearch, DEBOUNCE_DELAY);
 

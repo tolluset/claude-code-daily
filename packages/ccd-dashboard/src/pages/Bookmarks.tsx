@@ -1,36 +1,28 @@
 import { useBookmarks, useSessions } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
-import { formatDateForApi, extractProjectList } from '@/lib/utils';
+import { extractProjectList } from '@/lib/utils';
+import { buildQueryParams } from '@/lib/query-params';
+import { useDateRangeFilter } from '@/hooks/useDateRangeFilter';
 import { Filter } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import { SessionItem } from './Sessions';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { LoadingState } from '@/components/ui/LoadingState';
 
 export function Bookmarks() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedProject, setSelectedProject] = useState<string>(() => {
     return searchParams.get('project') || '';
   });
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => {
-    const fromParam = searchParams.get('from');
-    const toParam = searchParams.get('to');
-
-    if (fromParam && toParam) {
-      return {
-        from: new Date(fromParam),
-        to: new Date(toParam)
-      };
-    }
-
-    return {};
-  });
+  const { dateRange, updateDateRange } = useDateRangeFilter();
 
   const { handleBookmark, handleCopyId, handleDelete, copiedId } = useSessionActions();
   const { data, error } = useBookmarks(
-    dateRange.from ? formatDateForApi(dateRange.from) : undefined,
-    dateRange.to ? formatDateForApi(dateRange.to) : undefined,
+    dateRange.from?.toISOString().split('T')[0],
+    dateRange.to?.toISOString().split('T')[0],
     selectedProject || undefined
   );
 
@@ -39,19 +31,11 @@ export function Bookmarks() {
   const projects = extractProjectList(allSessions);
 
   if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="text-destructive">Cannot connect to server</div>
-      </div>
-    );
+    return <ErrorState />;
   }
 
   if (!data) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   const { sessions } = data;
@@ -67,21 +51,7 @@ export function Bookmarks() {
           <DateRangePicker
             value={dateRange}
             onChange={(value) => {
-              setDateRange(value);
-              const newSearchParams = new URLSearchParams(searchParams);
-              if (value.from && value.to) {
-                newSearchParams.set('from', formatDateForApi(value.from));
-                newSearchParams.set('to', formatDateForApi(value.to));
-              } else {
-                newSearchParams.delete('from');
-                newSearchParams.delete('to');
-              }
-              if (selectedProject) {
-                newSearchParams.set('project', selectedProject);
-              } else {
-                newSearchParams.delete('project');
-              }
-              setSearchParams(newSearchParams, { replace: true });
+              updateDateRange(value);
             }}
           />
           {projects.length > 0 && (
@@ -91,20 +61,12 @@ export function Bookmarks() {
                 value={selectedProject}
                 onChange={(e) => {
                   setSelectedProject(e.target.value);
-                  const newSearchParams = new URLSearchParams(searchParams);
-                  if (dateRange.from && dateRange.to) {
-                    newSearchParams.set('from', formatDateForApi(dateRange.from));
-                    newSearchParams.set('to', formatDateForApi(dateRange.to));
-                  } else {
-                    newSearchParams.delete('from');
-                    newSearchParams.delete('to');
-                  }
-                  if (e.target.value) {
-                    newSearchParams.set('project', e.target.value);
-                  } else {
-                    newSearchParams.delete('project');
-                  }
-                  setSearchParams(newSearchParams, { replace: true });
+                  const params = buildQueryParams(searchParams, {
+                    from: dateRange.from,
+                    to: dateRange.to,
+                    project: e.target.value
+                  });
+                  setSearchParams(params, { replace: true });
                 }}
                 className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
               >

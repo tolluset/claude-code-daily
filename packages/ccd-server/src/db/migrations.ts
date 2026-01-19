@@ -270,6 +270,26 @@ const migrations: Migration[] = [
       DROP TABLE IF EXISTS insights_fts;
       DROP TABLE IF EXISTS session_insights;
     `
+  },
+  {
+    name: '007_add_ai_reports',
+    up: `
+      CREATE TABLE IF NOT EXISTS ai_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_type TEXT NOT NULL,
+        report_date TEXT NOT NULL,
+        content TEXT NOT NULL,
+        stats_snapshot TEXT,
+        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(report_type, report_date)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_reports_type ON ai_reports(report_type);
+      CREATE INDEX IF NOT EXISTS idx_reports_date ON ai_reports(report_date);
+    `,
+    down: `
+      DROP TABLE IF EXISTS ai_reports;
+    `
   }
 ];
 

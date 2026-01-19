@@ -6,6 +6,7 @@ export const DASHBOARD_PORT = 3848;
 // Timeout constants
 export const DEFAULT_CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 export const DEFAULT_IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+export const MIN_SESSION_AGE_BEFORE_CLEANUP_MS = 10 * 60 * 1000; // 10 minutes
 
 // Data processing constants
 export const SUMMARY_MAX_LENGTH = 100;

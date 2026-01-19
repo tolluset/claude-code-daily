@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, FileText, Search, BarChart3, Moon, Sun, PanelLeftClose, PanelLeftOpen, Bookmark } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, FileText, Search, BarChart3, Moon, Sun, PanelLeftClose, PanelLeftOpen, Bookmark, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from './ThemeProvider';
 import { TokenUsageBadge } from './ui/TokenUsageBadge';
@@ -26,6 +26,26 @@ export function Layout() {
   const { theme, toggleTheme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
+
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/v1/export');
+      if (!response.ok) throw new Error('Export failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ccd-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Export failed. Please try again.');
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -107,6 +127,16 @@ export function Layout() {
 
           <div className="border-t p-4 space-y-2 flex-shrink-0">
             {!sidebarCollapsed && <TokenUsageBadge />}
+            <button
+              type="button"
+              onClick={handleExport}
+              className="w-full flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+              aria-label="Export data"
+              title={sidebarCollapsed ? 'Export Data' : undefined}
+            >
+              <Download className="h-4 w-4 flex-shrink-0" />
+              {!sidebarCollapsed && <span>Export Data</span>}
+            </button>
             <button
               type="button"
               onClick={toggleTheme}

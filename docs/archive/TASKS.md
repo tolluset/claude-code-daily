@@ -5,6 +5,52 @@
 
 ## Development Log
 
+### 2026-01-20
+- **Phase 2.1**: AI Insight Engine MVP ✅
+  - P2.1-001: Added `ai_reports` table migration (007_add_ai_reports)
+  - P2.1-002: Implemented LLM Provider interface with Claude API (claude-provider.ts)
+  - P2.1-003: Session analysis API (`POST /api/analyze/:sessionId`)
+  - P2.1-004: Manual report generation API (`POST /api/reports/generate`)
+  - P2.1-005: AI Reports UI page at `/ai-reports` with markdown rendering
+  - Features: efficiency scoring, task type detection, keyword extraction
+  - See: docs/development-log/2026-01-20-ai-insight-engine-phase1-implementation.md
+- **Phase 1.1**: N+1 Query Removal ✅
+  - P1.1-001: Created `getSessionsWithInsights()` with LEFT JOIN
+  - P1.1-002: Updated `/api/v1/daily-report` to use single query
+  - P1.1-003: Performance: N+1 → 1 queries, ~10x faster response
+  - See: docs/development-log/2026-01-20-refactoring-phase1-n-plus-one-query-removal.md
+- **OpenCode Plugin Implementation** ✅
+  - Created TypeScript plugin at `~/.config/opencode/plugins/ccd.ts`
+  - Event-driven session tracking with `session.created` event
+  - Source field detection: `opencode://` virtual paths
+  - Auto-server start with `bun x ccd-server`
+  - Git branch detection using Bun.spawn()
+  - See: docs/development-log/2026-01-20-opencode-plugin-implementation.md
+- **OpenCode Session Detection Fix** ✅
+  - Modified `session-start.sh` to detect source from transcript path
+  - Added `SOURCE` variable with grep-based detection
+  - Sessions now tagged with `source: "claude"` or `source: "opencode"`
+  - See: docs/development-log/2026-01-20-opencode-session-detection-fix.md
+- **Plugin Deployment Automation** ✅
+  - Bun auto-install via `smart-install.js` on SessionStart
+  - MCP server auto-registration via `.mcp.json`
+  - Path independence using `${CLAUDE_PLUGIN_ROOT}` environment variable
+  - Build automation with `copy-artifacts.sh` script
+  - User experience: 5+ steps → 1 command
+  - See: docs/development-log/2026-01-20-plugin-deployment-automation.md
+- **Periodic Session Cleanup** ✅
+  - Dual-mechanism cleanup: periodic (1hr) + API request-based
+  - 10-minute protection window for new sessions
+  - Graceful shutdown with SIGINT/SIGTERM handlers
+  - Prevents session deletion before first message arrives
+  - See: docs/development-log/2026-01-20-periodic-session-cleanup.md
+- **README Production Cleanup** ✅
+  - Updated README with latest features and installation instructions
+  - Added OpenCode plugin installation guide
+  - Improved tech stack documentation
+  - Added development log references
+  - See: docs/development-log/2026-01-20-readme-production-cleanup.md
+
 ### 2026-01-19
 - **Phase 14**: Cache-First Loading Pattern ✅
   - P14-001: Applied cache-first pattern to all dashboard pages
@@ -92,6 +138,30 @@ This document tracks all development tasks for the CCD project, organized by pha
 
 ---
 
+## Phase 1.1: N+1 Query Removal ✅
+
+**Status**: Complete (2026-01-20)
+
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| P1.1-001 | Create getSessionsWithInsights() | P0 | ✅ | LEFT JOIN with session_insights table |
+| P1.1-002 | Update daily-report endpoint | P0 | ✅ | Replace N+1 loop with single query |
+| P1.1-003 | Performance verification | P1 | ✅ | ~10x faster response time |
+
+---
+
+## Phase 1.1: N+1 Query Removal ✅
+
+**Status**: Complete (2026-01-20)
+
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| P1.1-001 | Create getSessionsWithInsights() | P0 | ✅ | LEFT JOIN with session_insights table |
+| P1.1-002 | Update daily-report endpoint | P0 | ✅ | Replace N+1 loop with single query |
+| P1.1-003 | Performance verification | P1 | ✅ | ~10x faster response time |
+
+---
+
 ## Task Legend
 
 | Status | Description |
@@ -123,6 +193,20 @@ This document tracks all development tasks for the CCD project, organized by pha
 | P1-004 | SQLite schema creation | P0 | ✅ | sessions, messages, daily_stats tables |
 | P1-005 | Bun + Hono server setup | P0 | ✅ | packages/ccd-server |
 | P1-006 | Server auto start/stop logic | P0 | ✅ | PID file + 1 hour timeout |
+| P1-007 | OpenCode plugin support | P1 | ✅ | TypeScript plugin + event hooks |
+| P1-008 | Source field detection | P1 | ✅ | Claude vs OpenCode session tracking |
+| P1-009 | Bun auto-installation | P2 | ✅ | smart-install.js on SessionStart |
+| P1-010 | MCP auto-registration | P2 | ✅ | .mcp.json configuration |
+| P1-011 | Plugin build automation | P2 | ✅ | copy-artifacts.sh script |
+| P1-012 | Periodic session cleanup | P1 | ✅ | Dual-mechanism (1hr + API) |
+| P1-013 | Documentation updates | P1 | ✅ | README + STATUS + CLAUDE.md |
+| P1-007 | OpenCode plugin support | P1 | ✅ | TypeScript plugin + event hooks |
+| P1-008 | Source field detection | P1 | ✅ | Claude vs OpenCode session tracking |
+| P1-009 | Bun auto-installation | P2 | ✅ | smart-install.js on SessionStart |
+| P1-010 | MCP auto-registration | P2 | ✅ | .mcp.json configuration |
+| P1-011 | Plugin build automation | P2 | ✅ | copy-artifacts.sh script |
+| P1-012 | Periodic session cleanup | P1 | ✅ | Dual-mechanism (1hr + API) |
+| P1-013 | Documentation updates | P1 | ✅ | README + STATUS + CLAUDE.md |
 
 ---
 
@@ -511,7 +595,7 @@ export default defineConfig({
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 1: Infrastructure | ✅ Complete | 6/6 (100%) |
+| Phase 1: Infrastructure | ✅ Complete | 13/13 (100%) |
 | Phase 2: Plugin Development | ✅ Complete | 6/6 (100%) |
 | Phase 3: MCP Development | ✅ Complete | 6/6 (100%) |
 | Phase 4: Dashboard (MVP) | ✅ Complete | 6/6 (100%) |
@@ -530,11 +614,11 @@ export default defineConfig({
 
 | Priority | Total | Completed | In Progress | Todo |
 |----------|-------|-----------|-------------|------|
-| P0 (Critical) | 18 | 12 | 0 | 6 |
-| P1 (High) | 35 | 33 | 0 | 2 |
-| P2 (Medium) | 14 | 2 | 0 | 12 |
+| P0 (Critical) | 19 | 14 | 0 | 5 |
+| P1 (High) | 40 | 37 | 0 | 3 |
+| P2 (Medium) | 16 | 4 | 0 | 12 |
 | P3 (Low) | 4 | 0 | 0 | 4 |
-| **Total** | **73** | **47** | **0** | **24** |
+| **Total** | **79** | **55** | **0** | **24** |
 
 ---
 
@@ -580,10 +664,10 @@ Cleanup
 
 ## Next Immediate Actions
 
-1. **[C-002]** Update README with latest features
-2. **[P7-001]** Dashboard production build setup
-3. **[P8-002]** Add E2E tests for hooks
-4. **[P7-003]** Add *bun-build to .gitignore
+1. **[P1.2]** Remove duplicate API calls in Sessions.tsx
+2. **[P1.3]** Apply getSessionsWithInsights() to other routes
+3. **[P7-001]** Dashboard production build setup
+4. **[P8-002]** Add E2E tests for hooks
 
 ---
 
@@ -599,4 +683,7 @@ Cleanup
 | Phase 12 (Performance Optimization) | 2026-01-19 | ✅ Complete |
 | Phase 13 (Layout & Navigation Refactoring) | 2026-01-19 | ✅ Complete |
 | Phase 14 (Cache-First Loading Pattern) | 2026-01-19 | ✅ Complete |
+| Phase 1.1 (N+1 Query Removal) | 2026-01-20 | ✅ Complete |
+| OpenCode Plugin Support | 2026-01-20 | ✅ Complete |
+| Plugin Deployment Automation | 2026-01-20 | ✅ Complete |
 | Production Ready | TBD | ⬜ Planned |

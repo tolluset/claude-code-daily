@@ -42,6 +42,46 @@ async function checkDashboardHealth(): Promise<boolean> {
   }
 }
 
+// Helper: Fetch from API with server health check
+async function fetchFromApi<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<{ success: true; data: T } | { success: false; error: string }> {
+  try {
+    const isServerUp = await checkServerHealth();
+    if (!isServerUp) {
+      return {
+        success: false,
+        error: 'CCD server is not running. Cannot access API.'
+      };
+    }
+
+    const response = await fetch(`${SERVER_URL}/api/v1${endpoint}`, options);
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `HTTP ${response.status}`
+      };
+    }
+
+    const result = await response.json();
+    return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
+
+// Helper: Create text response
+function createTextResponse(text: string) {
+  return { content: [{ type: "text" as const, text }] };
+}
+
+// Helper: Create error response
+function createErrorResponse(error: string) {
+  return createTextResponse(`❌ ${error}`);
+}
+
 // Helper: Open URL in default browser
 async function openBrowser(url: string): Promise<void> {
   const cmd =
@@ -121,45 +161,15 @@ server.tool(
       .describe("Time period for statistics (default: today)"),
   },
   async ({ period = "today" }) => {
-    const isServerUp = await checkServerHealth();
-    if (!isServerUp) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: "CCD server is not running. Cannot fetch statistics.",
-          },
-        ],
-      };
+    const result = await fetchFromApi<any>(`/stats?period=${period}`);
+
+    if (!result.success) {
+      return createErrorResponse(result.error);
     }
 
-    try {
-      const response = await fetch(`${SERVER_URL}/api/v1/stats?period=${period}`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+    const text = formatStats(result.data, period);
 
-      const stats = await response.json();
-      const text = formatStats(stats, period);
-
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text,
-          },
-        ],
-      };
-    } catch (error) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Failed to fetch statistics: ${error}`,
-          },
-        ],
-      };
-    }
+    return createTextResponse(text);
   }
 );
 
@@ -200,81 +210,36 @@ server.tool(
       .describe("Limit search to last N days (default: 30)"),
   },
   async ({ query, project, days = 30 }) => {
-    const isServerUp = await checkServerHealth();
-    if (!isServerUp) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: "CCD server is not running. Cannot search sessions.",
-          },
-        ],
-      };
+    const fromDate = new Date();
+    fromDate.setDate(fromDate.getDate() - days);
+
+    const params = new URLSearchParams({ q: query });
+    if (project) params.set('project', project);
+    params.set('from', fromDate.toISOString().split('T')[0]);
+
+    const result = await fetchFromApi<any>(`/search?${params}`);
+
+    if (!result.success) {
+      return createErrorResponse(result.error);
     }
 
-    try {
-      const fromDate = new Date();
-      fromDate.setDate(fromDate.getDate() - days);
+    const results = result.data;
 
-      const params = new URLSearchParams({ q: query });
-      if (project) params.set('project', project);
-      params.set('from', fromDate.toISOString().split('T')[0]);
+    if (!results || results.length === 0) {
+      return createTextResponse(`No results found for "${query}"`);
+    }
 
-      const response = await fetch(`${SERVER_URL}/api/v1/search?${params}`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const { data: results } = await response.json() as { data: Array<{
-        session_id: string;
-        content: string;
-        snippet: string;
-        type: string;
-        score: number;
-        timestamp: string;
-        project_name: string | null;
-        is_bookmarked: boolean;
-      }>};
-
-      if (!results || results.length === 0) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `No results found for "${query}"`,
-            },
-          ],
-        };
-      }
-
-      const formatted = results
-        .slice(0, 10)
-        .map((r, i) =>
-          `#${i + 1} [${r.project_name || 'Unknown'}] (${r.timestamp})
+    const formatted = results
+      .slice(0, 10)
+      .map((r: any, i: number) =>
+        `#${i + 1} [${r.project_name || 'Unknown'}] (${r.timestamp})
 Type: ${r.type}
 ${r.snippet.replace(/<[^>]*>/g, '')}
 → Session: http://localhost:${DASHBOARD_PORT}/sessions/${r.session_id}`
-        )
-        .join('\n\n');
+      )
+      .join('\n\n');
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `🔍 Search Results for "${query}" (${results.length} found)\n\n${formatted}`,
-          },
-        ],
-      };
-    } catch (error) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Search failed: ${error}`,
-          },
-        ],
-      };
-    }
+    return createTextResponse(`🔍 Search Results for "${query}" (${results.length} found)\n\n${formatted}`);
   }
 );
 

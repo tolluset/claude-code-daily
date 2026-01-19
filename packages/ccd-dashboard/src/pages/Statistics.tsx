@@ -10,6 +10,9 @@ import { ProjectPieChart } from '../components/ui/ProjectPieChart';
 import { Card } from '../components/ui/Card';
 import { Filter } from 'lucide-react';
 import { extractProjectList } from '../lib/utils';
+import { buildQueryParams } from '../lib/query-params';
+import { LoadingState } from '../components/ui/LoadingState';
+import { ErrorState } from '../components/ui/ErrorState';
 
 export function Statistics() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -79,11 +82,11 @@ export function Statistics() {
   }, [allSessions, selectedProject, dateRange]);
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-500">Error loading reports</div>
-      </div>
-    );
+    return <ErrorState minHeight="min-h-screen" />;
+  }
+
+  if (!dailyStats) {
+    return <LoadingState minHeight="min-h-screen" />;
   }
 
   if (!dailyStats) {
@@ -104,15 +107,12 @@ export function Statistics() {
             onChange={(value) => {
               if (value.from && value.to) {
                 setDateRange({ from: value.from, to: value.to });
-                const newSearchParams = new URLSearchParams(searchParams);
-                newSearchParams.set('from', format(value.from, 'yyyy-MM-dd'));
-                newSearchParams.set('to', format(value.to, 'yyyy-MM-dd'));
-                if (selectedProject) {
-                  newSearchParams.set('project', selectedProject);
-                } else {
-                  newSearchParams.delete('project');
-                }
-                setSearchParams(newSearchParams, { replace: true });
+                const params = buildQueryParams(searchParams, {
+                  from: value.from,
+                  to: value.to,
+                  project: selectedProject
+                });
+                setSearchParams(params, { replace: true });
               }
             }}
           />
@@ -123,15 +123,12 @@ export function Statistics() {
                 value={selectedProject}
                 onChange={(e) => {
                   setSelectedProject(e.target.value);
-                  const newSearchParams = new URLSearchParams(searchParams);
-                  newSearchParams.set('from', format(dateRange.from, 'yyyy-MM-dd'));
-                  newSearchParams.set('to', format(dateRange.to, 'yyyy-MM-dd'));
-                  if (e.target.value) {
-                    newSearchParams.set('project', e.target.value);
-                  } else {
-                    newSearchParams.delete('project');
-                  }
-                  setSearchParams(newSearchParams, { replace: true });
+                  const params = buildQueryParams(searchParams, {
+                    from: dateRange.from,
+                    to: dateRange.to,
+                    project: e.target.value
+                  });
+                  setSearchParams(params, { replace: true });
                 }}
                 className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
               >

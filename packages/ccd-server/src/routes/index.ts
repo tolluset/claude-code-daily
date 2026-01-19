@@ -7,6 +7,8 @@ export { sync } from './sync';
 export { search } from './search';
 export { insights } from './insights';
 export { dailyReport } from './daily-report';
+export { aiInsights } from './ai-insights';
+export { exportRoute } from './export';
 
 // Middleware exports
 export * from './middleware';

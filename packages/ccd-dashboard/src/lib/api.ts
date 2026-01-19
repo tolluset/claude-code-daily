@@ -14,6 +14,30 @@ import {
   type DailyReportData
 } from '@ccd/types';
 
+// AI Insights types
+export interface SessionAnalysis {
+  session_id: string;
+  summary: string;
+  key_learnings: string[];
+  problems_solved: string[];
+  code_patterns: string[];
+  technologies: string[];
+  task_type: 'bug_fix' | 'feature' | 'refactor' | 'learning' | 'config' | 'docs' | 'other';
+  difficulty: 'easy' | 'medium' | 'hard';
+  efficiency_score: number;
+  retry_count: number;
+  topic_keywords: string[];
+}
+
+export interface AIReport {
+  id?: number;
+  report_type: 'daily' | 'weekly' | 'monthly';
+  report_date: string;
+  content: string;
+  stats_snapshot: Record<string, unknown>;
+  generated_at?: string;
+}
+
 // Dashboard uses relative path (Vite proxies to actual server)
 const DASHBOARD_API_BASE = '/api/v1';
 
@@ -256,4 +280,54 @@ export function useDailyReport(date?: string) {
       return fetchApi<DailyReportData>(`/daily-report${params}`, undefined, DASHBOARD_API_BASE);
     }
   });
+}
+
+// AI Insights hooks
+export function useAIReports(type?: string, date?: string) {
+  const params = new URLSearchParams();
+  if (type) params.set('type', type);
+  if (date) params.set('date', date);
+
+  const queryString = params.toString();
+  const queryKey = ['ai-reports', type, date];
+
+  return useQuery({
+    queryKey,
+    queryFn: async () => {
+      const response = await fetchApi<AIReport[]>(`/ai-insights/reports${queryString ? `?${queryString}` : ''}`, undefined, DASHBOARD_API_BASE);
+      return response ?? [];
+    }
+  });
+}
+
+export async function generateAIReport(type: 'daily' | 'weekly' | 'monthly' = 'daily', date?: string): Promise<AIReport> {
+  const response = await fetch(`${DASHBOARD_API_BASE}/ai-insights/reports/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, date })
+  });
+
+  const data = await response.json() as ApiResponse<{ data: AIReport }>;
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to generate report');
+  }
+  if (!data.data) {
+    throw new Error('No data returned');
+  }
+  return data.data;
+}
+
+export async function analyzeSession(sessionId: string): Promise<SessionAnalysis> {
+  const response = await fetch(`${DASHBOARD_API_BASE}/ai-insights/analyze/${sessionId}`, {
+    method: 'POST'
+  });
+
+  const data = await response.json() as ApiResponse<{ data: SessionAnalysis }>;
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to analyze session');
+  }
+  if (!data.data) {
+    throw new Error('No data returned');
+  }
+  return data.data;
 }

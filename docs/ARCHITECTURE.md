@@ -1,11 +1,12 @@
-# Claude Code Daily (CCD) - Architecture
+# CCD Architecture Documentation
 
-> Last Updated: 2026-01-19
+> Last Updated: 2026-01-20
 > Author: tolluset
 
-**Recent Updates**:
-- 2026-01-19: Added localStorage persistent caching with instant page loads
-
+**Related Documentation:**
+- [DEVELOPMENT.md](DEVELOPMENT.md) - Development guide and setup
+- [CHANGELOG.md](CHANGELOG.md) - Development history
+- [README.md](../README.md) - User documentation
 
 ---
 

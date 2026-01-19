@@ -3,12 +3,12 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 
-import { health, sessions, messages, stats, sync, search, insights, dailyReport, setupGlobalMiddleware, setupApiMiddleware } from './routes';
+import { health, sessions, messages, stats, sync, search, insights, dailyReport, aiInsights, exportRoute, setupGlobalMiddleware, setupApiMiddleware } from './routes';
 import { resetIdleTimer, getIdleTimeMs } from './utils/timeout';
 import { writePidFile, isServerRunning } from './utils/pid';
 import { DATA_DIR, DB_PATH } from './db';
 import { cleanEmptySessions } from './db/queries';
-import { SERVER_PORT, DEFAULT_CLEANUP_INTERVAL_MS } from '@ccd/types';
+import { SERVER_PORT, DEFAULT_CLEANUP_INTERVAL_MS, MIN_SESSION_AGE_BEFORE_CLEANUP_MS } from '@ccd/types';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.argv.includes('--watch');
 
@@ -72,6 +72,34 @@ function performScheduledClean() {
   }
 }
 
+// Periodic cleanup interval (independent of API requests)
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
+
+function startPeriodicCleanup() {
+  cleanupIntervalId = setInterval(() => {
+    try {
+      const result = cleanEmptySessions(MIN_SESSION_AGE_BEFORE_CLEANUP_MS);
+      if (result.deleted.length > 0) {
+        console.log(`[CCD Server] Periodic cleanup: Cleaned ${result.deleted.length} empty session(s) older than 10 minutes`);
+      }
+    } catch (error) {
+      console.error('[CCD Server] Error during periodic cleanup:', error);
+    }
+  }, DEFAULT_CLEANUP_INTERVAL_MS);
+
+  console.log(`[CCD Server] Periodic cleanup started (interval: ${DEFAULT_CLEANUP_INTERVAL_MS / 1000 / 60} minutes)`);
+}
+
+function stopPeriodicCleanup() {
+  if (cleanupIntervalId) {
+    clearInterval(cleanupIntervalId);
+    cleanupIntervalId = null;
+    console.log('[CCD Server] Periodic cleanup stopped');
+  }
+}
+
+startPeriodicCleanup();
+
 const app = new Hono();
 
 // Setup middleware
@@ -87,6 +115,8 @@ app.route('/api/v1/sync', sync);
 app.route('/api/v1/search', search);
 app.route('/api/v1/insights', insights);
 app.route('/api/v1/daily-report', dailyReport);
+app.route('/api/v1/ai-insights', aiInsights);
+app.route('/api/v1/export', exportRoute);
 
 // Dashboard static files
 app.get('/', (c) => {
@@ -123,3 +153,16 @@ export default {
   port: SERVER_PORT,
   fetch: app.fetch.bind(app)
 };
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n[CCD Server] Shutting down gracefully...');
+  stopPeriodicCleanup();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n[CCD Server] Shutting down gracefully...');
+  stopPeriodicCleanup();
+  process.exit(0);
+});

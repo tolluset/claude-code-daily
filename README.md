@@ -7,6 +7,8 @@ A comprehensive analytics dashboard for Claude Code sessions. Track, analyze, an
 
 **Privacy-first** · **Zero configuration** · **Local storage only**
 
+**New:** OpenCode support with TypeScript-based plugin system · Automated deployment with Bun auto-install
+
 ## Features
 
 ### Session Management
@@ -33,8 +35,12 @@ A comprehensive analytics dashboard for Claude Code sessions. Track, analyze, an
 ### AI-Powered Insights
 - **Automatic Analysis** - AI extracts key learnings and patterns from sessions
 - **Structured Data** - Summary, problems solved, code patterns, technologies used
-- **Editable Notes** - Combine AI insights with your own observations
-- **Zero Configuration** - Uses Claude Code's built-in capabilities
+- **Efficiency Scoring** - Quantitative assessment of session productivity (0-100)
+- **Task Type Detection** - Automatic classification: bug fix, feature, refactor, learning, etc.
+- **Difficulty Assessment** - easy, medium, hard categorization based on complexity
+- **AI Reports** - Generated daily/weekly reports with insights and trends (integrated in Reports page)
+- **Zero Configuration** - Uses Claude API for intelligent analysis
+- **Cost-Effective** - ~$1.50/month for daily use (5 sessions/day)
 
 ### User Experience
 - **Responsive Design** - Works seamlessly on desktop and tablet
@@ -44,6 +50,9 @@ A comprehensive analytics dashboard for Claude Code sessions. Track, analyze, an
 - **Cache-First Loading** - Instant page loads with smart cache invalidation
 
 ### Integration
+- **Dual Platform Support** - Works with both Claude Code and OpenCode
+  - Claude Code: Shell script hooks via plugin marketplace
+  - OpenCode: TypeScript plugin with event-driven tracking
 - **MCP Tools** - Control dashboard via natural language commands
 - **RESTful API** - Full API access for custom integrations
 - **Slash Commands** - Quick actions within Claude Code (`/bookmark`, `/insights`, `/daily-report`)
@@ -53,7 +62,7 @@ A comprehensive analytics dashboard for Claude Code sessions. Track, analyze, an
 
 ### Installation
 
-**Recommended: Via Plugin Marketplace**
+**For Claude Code Users:**
 
 ```bash
 # Inside Claude Code
@@ -61,31 +70,60 @@ A comprehensive analytics dashboard for Claude Code sessions. Track, analyze, an
 /plugin install ccd@claude-code-daily
 ```
 
-The plugin automatically configures everything:
-- Server starts with your first Claude Code session
-- Automatic session and message tracking
-- MCP tools enabled for natural language control
-- Auto-shutdown after 1 hour of inactivity
-
-**Alternative: From Source**
+**For OpenCode Users:**
 
 ```bash
-# Clone and build
-git clone https://github.com/tolluset/claude-code-daily.git
-cd claude-code-daily
-pnpm install
-
-# Build and prepare plugin
-cd packages/ccd-plugin
-pnpm run build  # Builds all dependencies and copies artifacts
-
-# Install as local plugin
-claude plugin add /path/to/claude-code-daily/packages/ccd-plugin
+curl -fsSL https://raw.githubusercontent.com/tolluset/claude-code-daily/main/install-opencode.sh | bash
 ```
 
-**Requirements:**
-- Node.js 18+ (for initial setup)
-- Bun is automatically installed on first session start
+**What Gets Installed:**
+- CCD Server (auto-starts on first session)
+- Session & message tracking
+- MCP tools for natural language control
+- Auto-shutdown after 1 hour of inactivity
+};
+
+export const CcdPlugin: Plugin = async ({ directory }) => {
+  const cwd = directory;
+  const projectName = cwd.split("/").pop();
+  
+  try {
+    const { spawn } = await import("bun");
+    const gitBranch = existsSync(`${cwd}/.git`) 
+      ? spawn(["git", "branch", "--show-current"], { cwd })
+          .stdout.toString().trim()
+      : null;
+
+    await startServer();
+
+    return {
+      event: async ({ event }) => {
+        if (event.type === "session.created") {
+          const { info } = event.properties;
+          fetch("http://localhost:3847/api/v1/sessions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: info.id,
+              transcript_path: `opencode://${directory}/${info.id}`,
+              cwd,
+              project_name: projectName,
+              git_branch: gitBranch,
+              source: "opencode",
+            }),
+          }).catch(() => {});
+        }
+      },
+    };
+  } catch (e) {
+    console.log("[CCD] Plugin initialization error:", e);
+    return { event: async () => {} };
+  }
+};
+EOF
+
+# Restart OpenCode to load plugin
+```
 
 ### First Steps
 
@@ -137,7 +175,7 @@ Ask Claude directly when MCP is configured:
 
 ### API Reference
 
-RESTful API available at `http://localhost:3847/api/v1`
+ RESTful API available at `http://localhost:3847/api/v1`
 
 **Core Resources**
 ```
@@ -156,6 +194,7 @@ POST   /insights               # Save insights
 PATCH  /insights/:sessionId/notes  # Update notes
 
 GET    /daily-report           # Daily report (date param)
+GET    /export                 # Export all data as JSON
 GET    /health                 # Server status
 ```
 
@@ -197,13 +236,15 @@ See [Architecture Docs](docs/ARCHITECTURE.md) for details.
 |-------|------------|
 | **Monorepo** | pnpm workspaces + Turborepo |
 | **Server** | Hono + SQLite (FTS5) |
-| **Runtime** | Bun (dev) / Node.js (prod) |
-| **Dashboard** | React + Vite + TailwindCSS |
+| **Runtime** | Bun (auto-installed) |
+| **Dashboard** | React 19 + Vite + TailwindCSS |
 | **State** | TanStack Query |
 | **Charts** | Recharts |
-| **Plugin** | Bash + Claude Code Hooks |
+| **Claude Code Plugin** | Bash Hooks |
+| **OpenCode Plugin** | TypeScript + @opencode-ai/plugin |
 | **MCP** | @modelcontextprotocol/sdk |
 | **Testing** | Bun Test (29 tests) |
+| **Performance** | React Compiler (automatic memoization) |
 
 ## Project Structure
 
@@ -238,7 +279,63 @@ Optional settings via `~/.ccd/config.json`:
 echo '{"auto_extract_insights": true}' > ~/.ccd/config.json
 ```
 
-Insights run asynchronously and don't block session shutdown.
+ Insights run asynchronously and don't block session shutdown.
+
+## Data Backup & Export
+
+### Quick Backup (Recommended)
+
+All your data is stored locally in SQLite:
+
+```bash
+# Backup entire CCD data
+cp -r ~/.ccd ~/.ccd.backup.$(date +%Y%m%d)
+
+# Or just the database
+cp ~/.ccd/ccd.db ~/.ccd/ccd.db.backup.$(date +%Y%m%d)
+```
+
+**Location**: `~/.ccd/ccd.db` (SQLite database)
+
+### JSON Export
+
+Export all data as JSON via API or Dashboard:
+
+```bash
+# Export to file
+curl http://localhost:3847/api/v1/export > ccd-backup-$(date +%Y%m%d).json
+```
+
+**Export format** (session-based structure):
+```json
+{
+  "exported_at": "2026-01-20T12:34:56Z",
+  "version": "0.1.1",
+  "sessions": [
+    {
+      "id": "...",
+      "project_name": "ccd",
+      "git_branch": "main",
+      "source": "claude-code",
+      "created_at": "...",
+      "messages": [...],
+      "insights": {...}
+    }
+  ],
+  "daily_stats": [...],
+  "model_pricing": [...]
+}
+```
+
+### Data Access Options
+
+| Method | Use Case | Tools |
+|--------|----------|-------|
+| **SQLite DB** | Direct access, full backup | sqlite3, DB Browser, DBeaver |
+| **JSON Export** | API integration, parsing | Any JSON-capable tool |
+| **Dashboard UI** | Manual export | Click "Export" button |
+
+**Privacy**: All data remains local - no cloud sync.
 
 ## Documentation
 
@@ -248,6 +345,14 @@ Comprehensive documentation available in [`docs/`](docs/):
 - **[IMPLEMENTATION.md](docs/IMPLEMENTATION.md)** - API, hooks, and MCP tools
 - **[DEVELOPMENT_GUIDELINES.md](docs/DEVELOPMENT_GUIDELINES.md)** - Best practices
 - **[TASKS.md](docs/TASKS.md)** - Development roadmap and task tracking
+- **[STATUS.md](docs/STATUS.md)** - Development status and known issues
+
+### Development Logs
+
+Recent development activity in [`docs/development-log/`](docs/development-log/):
+
+- **2026-01-20**: OpenCode plugin implementation, deployment automation, periodic session cleanup
+- **2026-01-19**: Layout refactoring, cache-first loading, performance optimization
 
 ## Contributing
 
