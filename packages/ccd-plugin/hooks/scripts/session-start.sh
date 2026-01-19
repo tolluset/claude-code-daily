@@ -58,7 +58,4 @@ curl -s -X POST "$CCD_SERVER_URL/api/v1/sessions" \
         \"source\": \"$SOURCE\"
     }" > /dev/null 2>&1
 
-# 4. Clean empty sessions (async, non-blocking)
-curl -s -X POST "$CCD_SERVER_URL/api/v1/sessions/clean-empty" > /dev/null 2>&1 &
-
 exit 0
