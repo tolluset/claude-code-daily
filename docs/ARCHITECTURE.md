@@ -3,6 +3,10 @@
 > Last Updated: 2026-01-19
 > Author: tolluset
 
+**Recent Updates**:
+- 2026-01-19: Added localStorage persistent caching with instant page loads
+
+
 ---
 
 ## System Overview
@@ -37,7 +41,8 @@ A 3-component system that automatically tracks, stores, and visualizes Claude Co
 | Plugin (OpenCode) | @opencode-ai/plugin + TypeScript | Latest |
 | MCP | @modelcontextprotocol/sdk + Zod | Latest |
 | Dashboard | React + Vite + TailwindCSS | Latest |
-| State Management | TanStack Query | Latest |
+| State Management | TanStack Query + Persist | Latest |
+| Charts | Recharts | Phase 2 |
 | Charts | Recharts | Phase 2 |
 | Data Path | `~/.ccd/` (global storage) | - |
 
@@ -197,6 +202,121 @@ Claude Code Session Start
      (React)          (LLM)       (API)
 ```
 
+---
+
+## Caching Strategy
+
+### localStorage Persistent Cache
+
+The dashboard uses TanStack Query with localStorage persistence for instant page loads without loading indicators.
+
+**Implementation** (main.tsx:22-33):
+```typescript
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: Number.POSITIVE_INFINITY,
+      gcTime: Number.POSITIVE_INFINITY
+    }
+  }
+});
+
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'ccd-query-cache',
+  throttleTime: 1000
+});
+
+<PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+```
+
+**Cache Configuration**:
+- `staleTime: Infinity` - Cached data is always considered fresh
+- `gcTime: Infinity` - Prevents garbage collection of cached queries
+- `refetchOnWindowFocus: false` - Prevents unnecessary refetches
+- `refetchInterval: 30s` → Removed - No automatic polling
+
+**Benefits**:
+- Instant page loads after refresh (no loading indicator)
+- Background silent refresh updates
+- Data persists across browser sessions
+- Reduced server load (fewer API calls)
+
+**Data Flow**:
+```
+Initial Visit:
+  User opens page → API call → Display data → Store in localStorage
+
+Page Refresh:
+  User refreshes → Restore from localStorage → Instant display → Silent background refresh
+
+Navigation:
+  User navigates → TanStack Query memory cache → Instant display
+```
+
+### Defensive Programming
+
+All API hooks include data validation to prevent runtime errors when cache is corrupted:
+
+```typescript
+export function useSession(id: string) {
+  return useQuery({
+    queryKey: ['session', id],
+    queryFn: () => fetchApi<Session>(`/sessions/${id}`),
+    select: (data) => {
+      if (!data || typeof data !== 'object') {
+        console.error('Invalid session data:', data);
+        return null;
+      }
+      return data;
+    }
+  });
+}
+
+export function useSessionMessages(id: string) {
+  return useQuery({
+    queryKey: ['session', id, 'messages'],
+    queryFn: () => fetchApi<Message[]>(`/sessions/${id}/messages`),
+    select: (data) => {
+      if (!Array.isArray(data)) {
+        console.error('Invalid messages data:', data);
+        return [];
+      }
+      return data;
+    }
+  });
+}
+```
+
+### Page Loading Logic
+
+Pages display cached data immediately and only show loading when truly no data exists:
+
+```typescript
+// Dashboard.tsx
+const { data, error } = useTodayStats();
+
+if (error) {
+  return <ErrorDisplay />;
+}
+
+if (!data) {
+  return <Loading />;  // Only when no cache AND no data
+}
+
+// Render with cached data immediately
+return <DashboardContent data={data} />;
+```
+
+### Query Keys and Cache Invalidation
+
+See [DEVELOPMENT_GUIDELINES.md](DEVELOPMENT_GUIDELINES.md#react-query-cache-invalidation) for complete cache invalidation rules.
+
 ### OpenCode Plugin Architecture
 
 OpenCode uses a plugin-based event system for session tracking. The plugin subscribes to real-time events and sends data to the CCD Server.
@@ -230,9 +350,9 @@ OpenCode Session
 
 #### Plugin Location
 
-- **File**: `packages/ccd-plugin/.opencode/plugins/ccd-tracker.ts`
-- **Auto-loaded** by OpenCode from `~/.config/opencode/plugins/`
-- **Dependencies**: `@opencode-ai/plugin` (provided by OpenCode)
+- **File**: `packages/ccd-plugin/.opencode/plugin/ccd-tracker.ts`
+- **Auto-loaded** by OpenCode from project `.opencode/plugin/` directory
+- **Dependencies**: `@opencode-ai/plugin` (provided by OpenCode, must be in `~/.config/opencode/package.json`)
 
 #### Core Functions
 
@@ -414,3 +534,100 @@ curl -s -X POST "$CCD_SERVER_URL/api/v1/sessions/clean-empty" > /dev/null 2>&1 &
 - No external network requests
 - No secrets stored in database
 - SQLite file permissions: user-only access
+
+---
+
+## Dashboard Features
+
+### Page Structure
+
+1. **Main (`/`)**: Today's stats summary + recent sessions
+2. **Session list (`/sessions`)**: Filterable/sortable table
+3. **Session detail (`/sessions/:id`)**: Full conversation + token usage
+4. **Search (`/search`)**: Full-text search across all content
+5. **Daily Report (`/daily-report`)**: Comprehensive daily summary with insights
+6. **Reports (`/reports`)**: Analytics with 3 interactive charts
+
+### Key Components
+
+- **DailyStats**: Stats card grid
+- **SessionList**: Session list table
+- **SessionDetail**: Conversation timeline
+- **DailyReport**: Daily summary with insights
+- **BookmarkBadge**: Bookmark display/toggle
+- **SearchPage**: Full-text search interface
+
+### Daily Report Implementation
+
+**Purpose**: Provide comprehensive daily work summary with sessions, insights, and statistics.
+
+**Architecture**:
+```
+DailyReport Page
+  └─> Date Selector (state: selectedDate)
+       ├─> API Hook: useDailyReport(selectedDate)
+       │    └─> GET /api/v1/daily-report?date={date}
+       │
+       └─> Data Components
+            ├─> Stats Cards (5 cards)
+            │    ├─> Sessions count + avg duration
+            │    ├─> Messages count
+            │    ├─> Token usage (in/out)
+            │    ├─> Total cost
+            │    └─> Streak stats (current/longest)
+            │
+            ├─> Session List (if any)
+            │    └─> Session Card
+            │         ├─> Project name + summary
+            │         ├─> Time range
+            │         ├─> Bookmark indicator
+            │         ├─> Insight panel (if exists)
+            │         │    ├─> Summary
+            │         │    ├─> Key learnings
+            │         │    ├─> Problems solved
+            │         │    └─> Technologies tags
+            │         └─> Link to detail
+            │
+            └─> Empty State (if no sessions)
+                 └─> "이 날짜에는 세션이 없습니다"
+```
+
+**API Response Structure**:
+```typescript
+{
+  date: string;              // YYYY-MM-DD
+  stats: DailyStats;         // Daily stats from daily_stats table
+  streak: StreakStats;       // Current/longest streak
+  sessions: SessionWithInsight[];  // Sessions with embedded insights
+  summary: {
+    total_sessions: number;
+    total_messages: number;
+    total_tokens: number;
+    total_cost: number;
+    avg_session_duration: number | null;  // minutes
+    bookmarked_count: number;
+    projects: string[];      // Unique project names
+  }
+}
+```
+
+**Data Flow**:
+1. User selects date (defaults to today)
+2. `useDailyReport` hook fetches `/api/v1/daily-report?date=...`
+3. Server aggregates data from:
+   - `daily_stats` table (stats)
+   - Streak calculation (current/longest)
+   - `sessions` table (filtered by date)
+   - `session_insights` table (join with sessions)
+4. Frontend renders:
+   - 5 stat cards (sessions, messages, tokens, cost, streak)
+   - Session list with insight panels
+   - Empty state if no sessions
+   - Project tags
+
+**React Query Cache**:
+- Query key: `['daily-report', date]`
+- Stale time: Infinity
+- Refetch on window focus: disabled (explicit date changes trigger updates)
+- localStorage persistence: Enabled via PersistQueryClientProvider
+- Instant page loads: Cache data displayed immediately on refresh

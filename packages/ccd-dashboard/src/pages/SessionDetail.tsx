@@ -5,29 +5,43 @@ import { IconButton } from '@/components/ui/IconButton';
 import { SessionInsights } from '@/components/ui/SessionInsights';
 import { MessageContent } from '@/components/MessageContent';
 import { formatDateTime, formatNumber } from '@/lib/utils';
-import { Star, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder, Trash2, Sparkles, FileText } from 'lucide-react';
+import { Bookmark, ArrowLeft, Copy, Check, User, Bot, GitBranch, Folder, Trash2, Sparkles, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import { ResumeHelpTooltip } from '@/components/ui/ResumeHelpTooltip';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function SessionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: session, isLoading: sessionLoading } = useSession(id!);
-  const { data: messages, isLoading: messagesLoading } = useSessionMessages(id!);
-  const { data: insight, isLoading: insightLoading, refetch: refetchInsight } = useSessionInsight(id);
+
+  if (!id) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="text-destructive">Session ID not found</div>
+        <Link to="/sessions" className="text-primary hover:underline">
+          Back to sessions
+        </Link>
+      </div>
+    );
+  }
+
+  const queryClient = useQueryClient();
+  const { data: session } = useSession(id);
+  const { data: messages } = useSessionMessages(id);
+  const { data: insight, refetch: refetchInsight } = useSessionInsight(id);
   const { handleBookmark, handleCopyId, handleDelete, copiedId } = useSessionActions();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [notes, setNotes] = useState(insight?.user_notes || '');
+  const [notes, setNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   useEffect(() => {
     setNotes(insight?.user_notes || '');
   }, [insight]);
 
-  if (sessionLoading) {
+  if (!session) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -47,7 +61,11 @@ export function SessionDetail() {
   }
 
   const handleDeleteWithNav = async () => {
+    const sessionId = session.id;
     await handleDelete(session);
+    // Cancel any ongoing queries for this session to prevent 404 errors
+    queryClient.cancelQueries({ queryKey: ['session', sessionId] });
+    queryClient.removeQueries({ queryKey: ['session', sessionId] });
     navigate('/sessions');
   };
 
@@ -142,7 +160,7 @@ export function SessionDetail() {
           onClick={() => handleBookmark(session)}
           title="Toggle bookmark"
         >
-          <Star
+          <Bookmark
             className={`h-6 w-6 ${session.is_bookmarked
               ? 'text-yellow-500 fill-yellow-500'
               : 'text-muted-foreground'
@@ -207,7 +225,7 @@ export function SessionDetail() {
       </Card>
 
       {/* Session Insights */}
-      {insightLoading ? (
+      {!insight ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             Loading insights...
@@ -275,7 +293,6 @@ export function SessionDetail() {
                       <button
                         type="button"
                         onClick={() => {
-                          setNotes(insight?.user_notes || '');
                           setIsEditingNotes(false);
                         }}
                         disabled={isSavingNotes}
@@ -313,9 +330,9 @@ export function SessionDetail() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {messagesLoading ? (
+          {!messages ? (
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
-          ) : !messages || messages.length === 0 ? (
+          ) : !messages || !Array.isArray(messages) || messages.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No messages
             </div>
@@ -325,7 +342,7 @@ export function SessionDetail() {
                 <div
                   key={message.id}
                   className={`flex gap-4 p-4 rounded-lg ${message.type === 'user'
-                    ? 'bg-primary/5'
+                    ? 'bg-primary/10 dark:bg-primary/5'
                     : 'bg-muted'
                     }`}
                 >

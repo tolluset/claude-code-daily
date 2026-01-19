@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 
-import { health, sessions, messages, stats, sync, search, insights, setupGlobalMiddleware, setupApiMiddleware } from './routes';
+import { health, sessions, messages, stats, sync, search, insights, dailyReport, setupGlobalMiddleware, setupApiMiddleware } from './routes';
 import { resetIdleTimer, getIdleTimeMs } from './utils/timeout';
 import { writePidFile, isServerRunning } from './utils/pid';
 import { DATA_DIR, DB_PATH } from './db';
@@ -84,6 +84,7 @@ app.route('/api/v1/stats', stats);
 app.route('/api/v1/sync', sync);
 app.route('/api/v1/search', search);
 app.route('/api/v1/insights', insights);
+app.route('/api/v1/daily-report', dailyReport);
 
 // Dashboard static files
 app.get('/', (c) => {

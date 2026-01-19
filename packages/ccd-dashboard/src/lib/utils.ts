@@ -24,6 +24,10 @@ export function formatDate(dateStr: string): string {
   });
 }
 
+export function formatDateForApi(date: Date): string {
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+}
+
 export function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString('ko-KR', {
     hour: '2-digit',

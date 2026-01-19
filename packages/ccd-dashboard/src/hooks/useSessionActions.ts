@@ -33,7 +33,6 @@ export function useSessionActions() {
 
     queryClient.invalidateQueries({ queryKey: ['sessions'] });
     queryClient.invalidateQueries({ queryKey: ['search'] });
-    queryClient.invalidateQueries({ queryKey: ['streak'] });
   };
 
   const handleCopyId = (id: string, e?: React.MouseEvent) => {
@@ -47,7 +46,12 @@ export function useSessionActions() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleDelete = async (session: Session) => {
+  const handleDelete = async (session: Session, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     const confirmed = window.confirm(
       `Delete session "${session.project_name || session.id.slice(0, 8)}"?\nThis will also delete all messages in this session.`
     );

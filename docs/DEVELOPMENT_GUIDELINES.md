@@ -6,6 +6,55 @@ This document provides guidelines and best practices for developing Claude Code 
 
 ---
 
+## OpenCode Plugin Development
+
+### Problem: Plugin Loading and Event Handling
+
+OpenCode plugins have specific requirements for loading and event structure that differ from Claude plugins.
+
+**Common Issues:**
+- Plugin not loading (no logs, no functionality)
+- Events not firing as expected
+- Incorrect event property access
+
+**Solutions:**
+
+#### Plugin Loading
+- OpenCode loads plugins from `~/.config/opencode/plugin/` directory
+- Plugin file must be named appropriately (e.g., `ccd-tracker.ts`)
+- Dependencies must be installed in `~/.config/opencode/node_modules/`
+
+#### Event Structure
+OpenCode events have a different structure than Claude events:
+
+```typescript
+// Claude event structure (OLD)
+event.properties.sessionID
+event.properties.info.id
+
+// OpenCode event structure (CORRECT)
+event.properties.info.id                    // for session.created
+event.properties.info.sessionID            // for message.updated
+```
+
+#### Debugging Plugins
+Always add comprehensive logging for debugging:
+
+```typescript
+function log(message: string, data?: unknown) {
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] ${message}${data ? ` ${JSON.stringify(data)}` : ''}\n`;
+  writeFileSync(LOG_FILE, logEntry, { flag: 'a' });
+}
+```
+
+**Key Events to Handle:**
+- `session.created` - Extract session ID from `properties.info.id`
+- `message.updated` - Handle user messages, extract content from parts
+- `session.idle` - Mark session as ended
+
+---
+
 ## React Query Cache Invalidation
 
 ### Problem: Stale Data After Mutations
@@ -245,3 +294,117 @@ When adding or modifying UI components:
 // GOOD: Dark background in dark mode
 <div className="bg-white dark:bg-gray-800">{content}</div>
 ```
+
+---
+
+## TypeScript Best Practices
+
+### 1. Avoid Non-Null Assertions
+
+**❌ WRONG (Runtime Error Risk):**
+```typescript
+const { data: session } = useSession(id!);  // Crashes if id is undefined
+```
+
+**✅ CORRECT (Safe Null Check):**
+```typescript
+if (!id) {
+  return <SessionNotFound />;
+}
+
+const { data: session } = useSession(id);
+```
+
+### 2. Explicit Generic Types in Hooks
+
+**❌ WRONG (Type Inference Issues):**
+```typescript
+// TypeScript may infer wrong type
+export function useSessionInsight(sessionId: string | undefined) {
+  return useQuery({
+    queryKey: ['insight', sessionId],
+    queryFn: () => fetchInsight(sessionId),
+  });
+}
+```
+
+**✅ CORRECT (Explicit Type):**
+```typescript
+export function useSessionInsight(sessionId: string | undefined) {
+  return useQuery<SessionInsight | null>({
+    queryKey: ['insight', sessionId],
+    queryFn: () => fetchInsight(sessionId),
+  });
+}
+```
+
+### 3. Map Function Type Annotations
+
+**❌ WRONG (Implicit Any Type):**
+```typescript
+sessions.filter(s => s.is_bookmarked).length
+sessions.map(s => <SessionCard key={s.id} session={s} />)
+```
+
+**✅ CORRECT (Explicit Type):**
+```typescript
+import type { Session } from '@ccd/types';
+
+sessions.filter((s: Session) => s.is_bookmarked).length
+sessions.map((s: Session) => <SessionCard key={s.id} session={s} />)
+```
+
+### 4. State Initialization with Complex Types
+
+**❌ WRONG (Type Inference Issues):**
+```typescript
+const [notes, setNotes] = useState(insight?.user_notes || '');
+// TypeScript infers `notes` as never[] because `insight` could be null
+```
+
+**✅ CORRECT (Explicit Type and Proper Initialization):**
+```typescript
+const [notes, setNotes] = useState('');
+
+useEffect(() => {
+  if (insight?.user_notes) {
+    setNotes(insight.user_notes);
+  }
+}, [insight]);
+```
+
+### 5. Select Functions with Defensive Coding
+
+**✅ GOOD (Defensive Type Checking):**
+```typescript
+export function useSession(id: string) {
+  return useQuery({
+    queryKey: ['session', id],
+    queryFn: () => fetchApi<Session>(`/sessions/${id}`),
+    enabled: !!id,
+    select: (data) => {
+      if (!data || typeof data !== 'object') {
+        console.error('Invalid session data:', data);
+        return null;
+      }
+      return data;
+    }
+  });
+}
+```
+
+---
+
+## Testing Checklist
+
+### Type Safety
+- [ ] No non-null assertions (`!`) unless absolutely necessary
+- [ ] All map/filter functions have explicit types
+- [ ] All hooks have explicit generic types
+- [ ] `npx tsc --noEmit` passes without errors
+
+### Loading States
+- [ ] Empty states display correctly when truly no data
+- [ ] Error states display when API fails
+
+---

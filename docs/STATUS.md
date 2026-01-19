@@ -1,6 +1,7 @@
 # Claude Code Daily (CCD) - Status
 
 > Last Updated: 2026-01-19
+> Recent: Phase 13 (Layout & Navigation Refactoring), Phase 14 (Cache-First Loading Pattern)
 
 ---
 
@@ -38,6 +39,7 @@ ccd/
 | `src/routes/sync.ts` | ✅ | Transcript parsing and sync, empty session deletion |
 | `src/routes/search.ts` | ✅ | Full-text search endpoint |
 | `src/routes/insights.ts` | ✅ | Session insights CRUD endpoints |
+| `src/routes/daily-report.ts` | ✅ | Daily report aggregation endpoint |
 | `src/db/migrations/005_add_insights.sql` | ✅ | Insights table + FTS5 integration |
 | `src/routes/__tests__/*.test.ts` | ✅ | Unit & integration tests (29 tests) |
 | `src/utils/pid.ts` | ✅ | PID file management |
@@ -57,8 +59,11 @@ ccd/
 | `hooks/scripts/session-end.sh` | ✅ | Mark session ended + trigger auto-extract insights |
 | `hooks/scripts/auto-extract-insights.sh` | ✅ | Background insights extraction using Claude |
 | `commands/bookmark.md` | ✅ | /bookmark command |
+| `commands/daily-report.md` | ✅ | /daily-report command |
 | `.mcp.json` | ✅ | MCP configuration |
 | `mcp/server.ts` | ✅ | MCP server for plugin bundle |
+| `.opencode/plugin/ccd-tracker.ts` | ✅ | OpenCode plugin (project-local, working 2026-01-19) |
+| `.opencode/package.json` | ✅ | OpenCode plugin dependencies (@opencode-ai/plugin) |
 
 ### CCD Dashboard (packages/ccd-dashboard)
 
@@ -67,10 +72,13 @@ ccd/
 | `vite.config.ts` | ✅ | Vite configuration with React Compiler |
 | `package.json` | ✅ | Dependencies (React 19, TanStack Query, etc.) |
 | `src/main.tsx` | ✅ | React entry point |
-| `src/App.tsx` | ✅ | Router setup (Dashboard, Sessions, Reports, Search) |
-| `src/lib/api.ts` | ✅ | TanStack Query + API client |
+| `src/App.tsx` | ✅ | Router setup (Dashboard, Sessions, Reports, Search, Statistics) |
+| `src/lib/api.ts` | ✅ | TanStack Query + API client + caching (2026-01-19) |
+| `src/main.tsx` | ✅ | PersistQueryClientProvider + cache config (2026-01-19) |
 | `src/lib/utils.ts` | ✅ | Utility functions |
-| `src/components/Layout.tsx` | ✅ | Common layout with navigation |
+| `src/lib/token-utils.ts` | ✅ | Token usage calculation utilities (2026-01-19) |
+| `src/components/Layout.tsx` | ✅ | Sidebar navigation with collapse/expand (2026-01-19) |
+| `src/components/ThemeProvider.tsx` | ✅ | Dark mode theme provider with localStorage persistence (2026-01-19) |
 | `src/components/ui/Card.tsx` | ✅ | Card component |
 | `src/components/ui/IconButton.tsx` | ✅ | Icon button component with variants |
 | `src/components/ui/DateRangePicker.tsx` | ✅ | Date range selection component |
@@ -78,7 +86,9 @@ ccd/
 | `src/components/ui/SessionBarChart.tsx` | ✅ | Bar chart for session counts |
 | `src/components/ui/ProjectPieChart.tsx` | ✅ | Pie chart for project distribution |
 | `src/components/ui/StreakBadge.tsx` | ✅ | Coding streak tracker badge |
+| `src/components/ui/TokenUsageBadge.tsx` | ✅ | Token usage badge in sidebar (2026-01-19) |
 | `src/components/ui/SessionInsights.tsx` | ✅ | Session insights display component |
+| `src/components/ui/ResumeHelpTooltip.tsx` | ✅ | Help tooltip component |
 | `src/components/MessageContent.tsx` | ✅ | Markdown renderer with code block support |
 | `src/components/CodeBlock.tsx` | ✅ | Code block type detection router |
 | `src/components/SyntaxHighlightedCode.tsx` | ✅ | Syntax highlighting via Shiki |
@@ -86,12 +96,15 @@ ccd/
 | `src/components/DiffView.tsx` | ✅ | Git diff renderer (@pierre/diffs) |
 | `src/lib/code-block-utils.ts` | ✅ | Code block type detection helpers |
 | `src/lib/shiki-highlighter.ts` | ✅ | Shiki singleton instance manager |
+| `src/hooks/useDebounce.ts` | ✅ | Debounce hook (2026-01-19) |
+| `src/hooks/useThrottle.ts` | ✅ | Throttle hook (2026-01-19) |
 | `src/pages/Dashboard.tsx` | ✅ | Main dashboard (stats + streak badge) |
 | `src/pages/Sessions.tsx` | ✅ | Session list with filters (date, project) |
-| `src/pages/SessionDetail.tsx` | ✅ | Session detail with delete button |
-| `src/pages/Reports.tsx` | ✅ | Reports page with charts and filters |
+| `src/pages/SessionDetail.tsx` | ✅ | Session detail with delete button (2026-01-19: fixed loading states) |
+| `src/pages/Reports.tsx` | ✅ | Daily reports list with calendar view (2026-01-19: refactored) |
+| `src/pages/Statistics.tsx` | ✅ | Analytics dashboard with charts (2026-01-19: new page) |
 | `src/pages/Search.tsx` | ✅ | Full-text search page with result highlighting |
-| `src/components/ThemeProvider.tsx` | ✅ | Dark mode theme provider with localStorage persistence |
+| `src/pages/DailyReport.tsx` | ✅ | Daily report page with insights/diary format (2026-01-19: enhanced) |
 
 ### CCD MCP (packages/ccd-mcp)
 
@@ -127,6 +140,7 @@ ccd/
 | GET | /api/v1/stats/streak | ✅ |
 | POST | /api/v1/sync/transcript | ✅ |
 | GET | /api/v1/search | ✅ |
+| GET | /api/v1/daily-report?date=YYYY-MM-DD | ✅ |
 | GET | /api/v1/insights/:sessionId | ✅ |
 | POST | /api/v1/insights | ✅ |
 | PATCH | /api/v1/insights/:sessionId/notes | ✅ |
@@ -155,6 +169,7 @@ ccd/
 | search_sessions | ✅ | Full-text search across sessions and messages |
 | get_session_content | ✅ | Retrieves full session content for AI analysis |
 | save_session_insights | ✅ | Saves AI-extracted insights to database |
+| generate_daily_report | ✅ | Generates comprehensive daily report |
 
 ---
 
@@ -168,6 +183,70 @@ ccd/
 ---
 
 ## Development Log
+
+### 2026-01-19
+- ✅ **Session Delete Navigation Fix** - Fixed two critical bugs in session deletion
+  - Fixed event propagation in Sessions list (delete button now prevents Link navigation)
+  - Fixed 404 error after deletion in SessionDetail (added query cancellation before navigation)
+  - Updated useSessionActions.handleDelete to accept event parameter
+  - Added cancelQueries/removeQueries before navigate in SessionDetail
+  - Documented in docs/development-log/2026-01-19-session-delete-navigation-fix.md
+- ✅ **Phase 14: Cache-First Loading Pattern** - Applied to all pages for instant page loads
+  - All pages now use `!data` check instead of `isLoading`
+  - Page refresh shows cached data instantly (no loading indicator)
+  - Background refresh updates data without UI disruption
+  - Fixed loading state handling in Dashboard, Search, Statistics, DailyReport, Reports
+  - Fixed SessionDetail loading states for session, messages, and insights
+  - Resolved TypeScript compilation errors across all pages
+  - Removed non-null assertions (added proper null checks)
+  - Added explicit generic types to hooks
+  - Added explicit type annotations to map/filter functions
+  - Fixed state initialization with complex types
+  - Documented in DEVELOPMENT_GUIDELINES.md (Loading State Best Practices)
+  - Documented in DEVELOPMENT_GUIDELINES.md (TypeScript Best Practices)
+  - Documented in docs/development-log/2026-01-19-caching-and-loading-patterns.md
+  - Documented in docs/CACHING.md
+- ✅ **Phase 13: Layout & Navigation Refactoring** - Major UX improvements
+  - Changed from top header to left sidebar navigation (256px width, collapsible to 64px)
+  - Split Reports into Daily Reports List (/reports) + Analytics Dashboard (/statistics)
+  - Enhanced Daily Report page to insights/diary format with narrative timeline
+  - Added collapse/expand functionality with keyboard shortcuts (Ctrl/Cmd + B, edge click, Escape)
+  - Implemented active menu persistence for sub-pages
+  - Fixed timezone handling (local timezone for all date operations via getLocalDateString())
+  - Fixed layout issues (overflow, layout shift, text truncation)
+  - Documented in docs/LAYOUT_NAVIGATION_CHANGES_2026-01-19.md
+- ✅ **Phase 12: Performance Optimization** - React Compiler integration
+  - Installed babel-plugin-react-compiler@latest
+  - Configured Vite for React Compiler
+  - Automatic memoization for components and values
+  - React DevTools Memo ✨ badge verification
+- ✅ **Phase 11: Productivity Insights** - Cost tracking and AI insights
+  - Cost calculation system with model pricing table
+  - Cost Dashboard cards showing input/output costs
+  - Migration 006: Added cost columns to messages and daily_stats
+  - AI Session Insights via MCP tools (get_session_content, save_session_insights)
+  - SessionInsights UI component with edit/delete
+  - "Generate Insights" button in SessionDetail
+  - /extract-insights slash command
+  - Auto-extract on Stop hook (optional, config-based)
+  - Coding Streak Tracker (getStreakStats() + StreakBadge component)
+- ✅ **Phase 10: Full-Text Search** - SQLite FTS5 integration
+  - FTS5 database migration (003_add_fts_search)
+  - searchSessions() with BM25 ranking algorithm
+  - GET /api/v1/search endpoint with filters
+  - Search page UI with result highlighting
+  - DiffView component for future code diff
+  - search_sessions MCP tool
+  - SearchResult and SearchOptions type definitions
+  - Documented in docs/SEARCH_IMPLEMENTATION.md
+- ✅ **Phase 5: Enhanced Statistics** - Recharts integration
+  - ProjectPieChart component with 10-color palette
+  - Responsive 3-column chart layout (TokenTrend, SessionBar, ProjectPie)
+  - Project distribution visualization with percentage labels
+- ✅ **Phase 6: Enhanced Filtering** - Advanced filtering capabilities
+  - Project filter to Sessions page (dropdown select)
+  - Date range to Sessions page (DateRangePicker component)
+  - Project filter to Reports page (filter charts by project)
 
 For detailed development log, see [TASKS.md](TASKS.md).
 

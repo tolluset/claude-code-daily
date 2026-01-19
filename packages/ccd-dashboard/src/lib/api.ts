@@ -8,10 +8,10 @@ import {
   type ApiResponse,
   type DailyStats,
   type SearchResult,
-  type StreakStats,
   type SessionInsight,
   type CreateInsightRequest,
-  type UpdateInsightNotesRequest
+  type UpdateInsightNotesRequest,
+  type DailyReportData
 } from '@ccd/types';
 
 // Dashboard uses relative path (Vite proxies to actual server)
@@ -21,8 +21,7 @@ const DASHBOARD_API_BASE = '/api/v1';
 export function useTodayStats() {
   return useQuery({
     queryKey: ['stats', 'today'],
-    queryFn: () => fetchApi<TodayStatsResponse>('/stats/today', undefined, DASHBOARD_API_BASE),
-    refetchInterval: 30000
+    queryFn: () => fetchApi<TodayStatsResponse>('/stats/today', undefined, DASHBOARD_API_BASE)
   });
 }
 
@@ -41,8 +40,7 @@ export function useDailyStats(from?: string, to?: string, days?: number, project
     queryFn: async () => {
       const response = await fetchApi<DailyStats[]>(`/stats/daily${queryString ? `?${queryString}` : ''}`, undefined, DASHBOARD_API_BASE);
       return response ?? [];
-    },
-    refetchInterval: 30000
+    }
   });
 }
 
@@ -58,19 +56,26 @@ export function useSessions(date?: string, from?: string, to?: string, project?:
   if (project) params.set('project', project);
 
   const queryString = params.toString();
+  const queryKey = ['sessions', date || 'today', from, to, project];
 
   return useQuery({
-    queryKey: ['sessions', date || 'today', from, to, project],
-    queryFn: () => fetchApi<SessionListResponse>(`/sessions?${queryString}`, undefined, DASHBOARD_API_BASE),
-    refetchInterval: 30000
+    queryKey,
+    queryFn: () => fetchApi<SessionListResponse>(`/sessions?${queryString}`, undefined, DASHBOARD_API_BASE)
   });
 }
 
 export function useSession(id: string) {
-  return useQuery({
+  return useQuery<Session | null>({
     queryKey: ['session', id],
     queryFn: () => fetchApi<Session>(`/sessions/${id}`, undefined, DASHBOARD_API_BASE),
-    enabled: !!id
+    enabled: !!id,
+    select: (data) => {
+      if (!data || typeof data !== 'object') {
+        console.error('Invalid session data:', data);
+        return null;
+      }
+      return data;
+    }
   });
 }
 
@@ -78,7 +83,14 @@ export function useSessionMessages(id: string) {
   return useQuery({
     queryKey: ['session', id, 'messages'],
     queryFn: () => fetchApi<Message[]>(`/sessions/${id}/messages`, undefined, DASHBOARD_API_BASE),
-    enabled: !!id
+    enabled: !!id,
+    select: (data) => {
+      if (!Array.isArray(data)) {
+        console.error('Invalid messages data:', data);
+        return [];
+      }
+      return data;
+    }
   });
 }
 
@@ -94,7 +106,10 @@ export async function toggleBookmark(id: string, note?: string): Promise<Session
   if (!data.success) {
     throw new Error(data.error || 'Failed to toggle bookmark');
   }
-  return data.data!;
+  if (!data.data) {
+    throw new Error('No data returned');
+  }
+  return data.data;
 }
 
 export async function deleteSession(id: string): Promise<void> {
@@ -138,54 +153,41 @@ export function useSearchResults(
           console.log('Response data length:', response?.length);
         }
         return response ?? [];
-      } catch (error) {
+      } catch (error: unknown) {
         if (import.meta.env.DEV) {
           console.error('Search API error:', error);
         }
         throw error;
       }
     },
-    enabled: !!query && query.length > 0,
-    retry: 1,
-    staleTime: 0, // Disable caching
-    refetchOnMount: true,
-    refetchOnWindowFocus: false
-  });
-}
-
-// Streak stats hook
-export function useStreakStats() {
-  return useQuery({
-    queryKey: ['streak'],
-    queryFn: async () => {
-      const response = await fetchApi<StreakStats>('/stats/streak', undefined, DASHBOARD_API_BASE);
-      return response;
-    },
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5 // 5 minutes cache
+    enabled: !!query && query.length > 0
   });
 }
 
 // Session Insights hooks
 export function useSessionInsight(sessionId: string | undefined) {
-  return useQuery({
+  return useQuery<SessionInsight | null>({
     queryKey: ['insight', sessionId],
     queryFn: async () => {
       if (!sessionId) return null;
       try {
         const response = await fetchApi<SessionInsight>(`/insights/${sessionId}`, undefined, DASHBOARD_API_BASE);
         return response;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Return null if insight doesn't exist (404)
-        if (error.message?.includes('not found') || error.message?.includes('404')) {
+        console.log('Insight fetch error:', error); // Debug logging
+        if (error instanceof Error && (
+          error.message?.includes('not found') ||
+          error.message?.includes('404') ||
+          error.message?.includes('Not Found')
+        )) {
           return null;
         }
         throw error;
       }
     },
     enabled: !!sessionId,
-    retry: false,
-    staleTime: 1000 * 60 * 5 // 5 minutes cache
+    retry: false
   });
 }
 
@@ -200,7 +202,10 @@ export async function createOrUpdateInsight(data: CreateInsightRequest): Promise
   if (!result.success) {
     throw new Error(result.error || 'Failed to create/update insight');
   }
-  return result.data!;
+  if (!result.data) {
+    throw new Error('No data returned');
+  }
+  return result.data;
 }
 
 export async function updateInsightNotes(sessionId: string, notes: string): Promise<void> {
@@ -225,4 +230,14 @@ export async function deleteInsight(sessionId: string): Promise<void> {
   if (!result.success) {
     throw new Error(result.error || 'Failed to delete insight');
   }
+}
+
+export function useDailyReport(date?: string) {
+  return useQuery({
+    queryKey: ['daily-report', date],
+    queryFn: async () => {
+      const params = date ? `?date=${date}` : '';
+      return fetchApi<DailyReportData>(`/daily-report${params}`, undefined, DASHBOARD_API_BASE);
+    }
+  });
 }

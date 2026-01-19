@@ -2,8 +2,8 @@ import { useSessions } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
-import { formatDate, formatTime, extractProjectList } from '@/lib/utils';
-import { Star, GitBranch, Clock, Copy, Check, Trash2, Filter } from 'lucide-react';
+import { formatDate, formatTime, formatDateForApi, extractProjectList } from '@/lib/utils';
+import { Bookmark, GitBranch, Clock, Copy, Check, Trash2, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, memo } from 'react';
 import { useSessionActions } from '@/hooks/useSessionActions';
@@ -16,20 +16,12 @@ export function Sessions() {
 
   const { data: allData } = useSessions();
   const { handleBookmark, handleCopyId, handleDelete, copiedId } = useSessionActions();
-  const { data, isLoading, error } = useSessions(
+  const { data, error } = useSessions(
     undefined,
-    dateRange.from ? formatDate(dateRange.from.toISOString()) : undefined,
-    dateRange.to ? formatDate(dateRange.to.toISOString()) : undefined,
+    dateRange.from ? formatDateForApi(dateRange.from) : undefined,
+    dateRange.to ? formatDateForApi(dateRange.to) : undefined,
     selectedProject || undefined
   );
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -42,7 +34,15 @@ export function Sessions() {
     );
   }
 
-  const { sessions } = data!;
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  const { sessions } = data;
   const today = formatDate(new Date().toISOString());
   const bookmarked = sessions.filter(s => s.is_bookmarked);
   const regular = sessions.filter(s => !s.is_bookmarked);
@@ -81,7 +81,7 @@ export function Sessions() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+              <Bookmark className="h-5 w-5 text-yellow-500 fill-yellow-500" />
               Bookmarks
             </CardTitle>
           </CardHeader>
@@ -153,16 +153,16 @@ const SessionItem = memo(function SessionItem({ session, onBookmark, onCopyId, o
   return (
     <Link
       to={`/sessions/${session.id}`}
-      className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted transition-colors"
+      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg border hover:bg-muted transition-colors gap-3"
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-start sm:items-center gap-2 sm:gap-4 flex-1 min-w-0">
         <IconButton
           type="button"
           size="sm"
           onClick={(e) => onBookmark(session, e)}
-          className="p-1"
+          className="p-1 flex-shrink-0"
         >
-          <Star
+          <Bookmark
             className={`h-5 w-5 ${
               session.is_bookmarked
                 ? 'text-yellow-500 fill-yellow-500'
@@ -174,14 +174,14 @@ const SessionItem = memo(function SessionItem({ session, onBookmark, onCopyId, o
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-green-500' : 'bg-muted-foreground'}`} />
-            <span className="font-medium">{session.project_name || '(unknown)'}</span>
+            <span className="font-medium truncate">{session.project_name || '(unknown)'}</span>
           </div>
           {session.summary && (
-            <p className="text-sm text-foreground/80 mt-1 truncate max-w-md">
+            <p className="text-sm text-foreground/80 mt-1 truncate">
               {session.summary}
             </p>
           )}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
             {session.git_branch && (
               <span className="flex items-center gap-1">
                 <GitBranch className="h-3 w-3" />
@@ -193,25 +193,25 @@ const SessionItem = memo(function SessionItem({ session, onBookmark, onCopyId, o
               {formatTime(session.started_at)}
             </span>
             {session.bookmark_note && (
-              <span className="text-yellow-600">{session.bookmark_note}</span>
+              <span className="text-yellow-600 truncate">{session.bookmark_note}</span>
             )}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-shrink-0 sm:border-l sm:pl-4">
         <button
           type="button"
           onClick={(e) => onCopyId(session.id, e)}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground p-2"
+          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground p-1.5 sm:p-2"
           title="Copy session ID"
         >
           {copiedId === session.id ? (
-            <Check className="h-4 w-4 text-green-500" />
+            <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
           ) : (
-            <Copy className="h-4 w-4" />
+            <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           )}
-          <code className="text-xs">{session.id.slice(0, 8)}</code>
+          <code className="text-xs hidden sm:inline">{session.id.slice(0, 8)}</code>
         </button>
         <ResumeHelpTooltip position="right" />
         <IconButton
@@ -219,8 +219,9 @@ const SessionItem = memo(function SessionItem({ session, onBookmark, onCopyId, o
           size="sm"
           onClick={(e) => onDelete(session, e)}
           title="Delete session"
+          className="p-1.5 sm:p-2"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </IconButton>
       </div>
     </Link>

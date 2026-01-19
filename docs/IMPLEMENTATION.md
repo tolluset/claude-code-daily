@@ -3,6 +3,9 @@
 > Last Updated: 2026-01-19
 > Author: tolluset
 
+**Recent Updates**:
+- 2026-01-19: Added localStorage persistent caching with instant page loads
+
 ---
 
 ## API Endpoints
@@ -44,6 +47,7 @@ Base URL: `http://localhost:3847/api/v1`
 | GET | /stats/daily | Daily stats (date range) |
 | GET | /stats/daily?from=...&to=... | Daily stats with range |
 | GET | /stats/daily?days=7 | Last N days |
+| GET | /stats/streak | Coding streak statistics |
 
 ### Search
 
@@ -51,6 +55,13 @@ Base URL: `http://localhost:3847/api/v1`
 |--------|----------|-------------|
 | GET | /search | Full-text search across sessions/messages |
 | GET | /search?q=...&project=...&bookmarked=true | Search with filters |
+
+### Daily Report
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /daily-report | Comprehensive daily report (date parameter optional) |
+| GET | /daily-report?date=2026-01-18 | Report for specific date |
 
 ### Sync
 
@@ -214,6 +225,7 @@ When Migration 006 runs:
 | `open_dashboard` | Open dashboard in browser | None |
 | `get_stats` | Get session statistics | period: "today" \| "week" \| "month" \| "all" |
 | `search_sessions` | Full-text search sessions | query (required), project (optional), days (optional, default: 30) |
+| `generate_daily_report` | Generate daily report | date (optional, YYYY-MM-DD, default: today) |
 
 ### Usage Examples
 
@@ -221,6 +233,8 @@ Ask Claude directly:
 - "Open the dashboard" → calls `open_dashboard`
 - "Show my stats" → calls `get_stats`
 - "What did I do this week?" → calls `get_stats(period: "week")`
+- "Show me my daily report" → calls `generate_daily_report`
+- "What did I do yesterday?" → calls `generate_daily_report(date: "2026-01-18")`
 
 ---
 
@@ -345,6 +359,10 @@ MessageContent (react-markdown)
 - [x] Main dashboard page
 - [x] Session list page
 - [x] Session detail page
+- [x] localStorage persistent cache (2026-01-19)
+- [x] Instant page loads without loading indicators
+- [x] Defensive programming with data validation
+- [x] Removed automatic polling (refetchInterval)
 
 ### Phase 5: Enhanced Statistics 🚧
 
@@ -476,3 +494,177 @@ ORDER BY started_at DESC;
   "date-fns": "^3.x"
 }
 ```
+
+---
+
+## Commands
+
+### Available Slash Commands
+
+| Command | Description | Parameters |
+|----------|-------------|------------|
+| `/bookmark` | Toggle bookmark on current session | note (optional) |
+| `/insights` | Extract AI insights from current session | None |
+| `/daily-report` | Generate daily report | date (optional, YYYY-MM-DD) |
+
+### Usage Examples
+
+```bash
+# Toggle bookmark
+/bookmark
+/bookmark "fix: authentication bug"
+
+# Extract insights
+/insights
+
+# Generate daily report
+/daily-report                    # Today's report
+/daily-report 2026-01-18         # Specific date
+```
+
+### Implementation
+
+Each command is a markdown file in `packages/ccd-plugin/commands/` with:
+
+- **YAML Frontmatter**: `description`, `argument-hint`, `allowed-tools`
+- **Bash Execution**: Uses `!` syntax to execute API calls
+- **Response Parsing**: Handles JSON responses and provides user-friendly output
+
+Example structure:
+```markdown
+---
+description: Generate a daily report for today or a specific date
+argument-hint: [YYYY-MM-DD]
+allowed-tools: Bash(curl:*)
+---
+
+Generate a comprehensive daily report summarizing your Claude Code sessions.
+
+!`curl -s "http://localhost:3847/api/v1/daily-report?date=$DATE"`
+
+Based on the response:
+- Parse and display the report summary
+- Show session list with insights
+- Provide dashboard link
+```
+
+---
+
+## Caching Implementation
+
+### Overview
+
+The dashboard uses TanStack Query with localStorage persistence to provide instant page loads and minimize API calls.
+
+### Dependencies
+
+```json
+{
+  "@tanstack/react-query": "^5.66.0",
+  "@tanstack/react-query-persist-client": "^5.90.21",
+  "@tanstack/query-sync-storage-persister": "^5.90.21"
+}
+```
+
+### Configuration (main.tsx)
+
+```typescript
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: Number.POSITIVE_INFINITY,
+      gcTime: Number.POSITIVE_INFINITY
+    }
+  }
+});
+
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'ccd-query-cache',
+  throttleTime: 1000
+});
+
+<PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+```
+
+**Configuration Details**:
+- `staleTime: Infinity` - Cache never expires
+- `gcTime: Infinity` - Garbage collection disabled
+- `refetchOnWindowFocus: false` - No refresh on tab switch
+- `refetchInterval: 30s` - Removed from all queries
+- `throttleTime: 1000ms` - Debounce localStorage writes
+
+### Cache Keys
+
+| Query Key | Purpose |
+|-----------|---------|
+| `['stats', 'today']` | Today's stats |
+| `['stats', 'daily']` | Daily stats with filters |
+| `['sessions']` | Session list |
+| `['session', id]` | Single session detail |
+| `['session', id, 'messages']` | Session messages |
+| `['search', ...]` | Search results |
+| `['daily-report', date]` | Daily report data |
+| `['insight', sessionId]` | Session insights |
+
+### API Hooks with Caching
+
+**useTodayStats** (api.ts:22-36):
+```typescript
+export function useTodayStats() {
+  return useQuery({
+    queryKey: ['stats', 'today'],
+    queryFn: () => fetchApi<TodayStatsResponse>('/stats/today'),
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+    initialData: () => {
+      try {
+        const cached = localStorage.getItem('ccd-query-cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          const todayData = parsed.clientState?.queries?.find((q: { queryKey: string[] }) =>
+            JSON.stringify(q.queryKey) === JSON.stringify(['stats', 'today'])
+          );
+          return todayData?.state?.data;
+        }
+      } catch (e) {
+        console.error('Failed to parse cached data:', e);
+      }
+      return undefined;
+    }
+  });
+}
+```
+
+### Loading Logic
+
+Pages use `!data` check instead of `isLoading` to display cached data immediately:
+
+```typescript
+// BAD - Shows loading even with cache
+if (isLoading) return <Loading />;
+
+// GOOD - Only shows loading when truly no data
+if (!data) return <Loading />;
+
+// Render cached data immediately
+return <Content data={data} />;
+```
+
+### Cache Invalidation
+
+See [DEVELOPMENT_GUIDELINES.md](DEVELOPMENT_GUIDELINES.md#react-query-cache-invalidation) for cache invalidation rules.
+
+### Benefits
+
+1. **Instant Page Loads**: No loading indicator on refresh
+2. **Offline Support**: Cache data available offline
+3. **Reduced Server Load**: Fewer API calls
+4. **Better UX**: Seamless navigation between pages
+5. **Silent Updates**: Background refresh without UI disruption

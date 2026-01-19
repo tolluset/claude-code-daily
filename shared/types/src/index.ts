@@ -127,6 +127,29 @@ export interface UpdateInsightNotesRequest {
   notes: string;
 }
 
+// Daily Report types
+export interface DailyReportSummary {
+  total_sessions: number;
+  total_messages: number;
+  total_tokens: number;
+  total_cost: number;
+  avg_session_duration: number | null;
+  bookmarked_count: number;
+  projects: string[];
+}
+
+export interface SessionWithInsight extends Session {
+  insight?: SessionInsight | null;
+}
+
+export interface DailyReportData {
+  date: string;
+  stats: DailyStats;
+  streak: StreakStats;
+  sessions: SessionWithInsight[];
+  summary: DailyReportSummary;
+}
+
 // Search types
 export interface SearchResult {
   session_id: string;

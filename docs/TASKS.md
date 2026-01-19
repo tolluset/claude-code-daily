@@ -6,12 +6,28 @@
 ## Development Log
 
 ### 2026-01-19
+- **Phase 14**: Cache-First Loading Pattern ✅
+  - P14-001: Applied cache-first pattern to all dashboard pages
+  - P14-002: Fixed TypeScript compilation errors across all pages
+  - P14-003: Established loading state best practices
+  - Page refresh now shows cached data instantly (no loading indicator)
+  - Background refresh updates data without UI disruption
+  - See: docs/development-log/2026-01-19-caching-and-loading-patterns.md
+  - See: docs/CACHING.md
+- **Phase 13**: Layout & Navigation Refactoring ✅
+  - P13-001: Changed from top header to left sidebar navigation
+  - P13-002: Split Reports into Daily Reports List + Analytics Dashboard
+  - P13-003: Enhanced Daily Report page to insights/diary format
+  - P13-004: Added collapse/expand functionality with keyboard shortcuts
+  - P13-005: Implemented active menu persistence for sub-pages
+  - P13-006: Fixed timezone handling (local timezone for all date operations)
+  - Fixed layout issues (overflow, layout shift, text truncation)
+  - See: docs/LAYOUT_NAVIGATION_CHANGES_2026-01-19.md
 - **Phase 12**: React Compiler setup ✅
   - P12-001: babel-plugin-react-compiler@latest installation
   - P12-002: Vite configuration for React Compiler
   - Automatic memoization for components and values
   - React DevTools Memo ✨ badge verification
-  - See: docs/REACT_COMPILER_SETUP_2026-01-19.md
 - **Phase 11**: Cost Tracking feature complete ✅
   - P11-002: Cost calculation system with model pricing table
   - P11-006: Cost Dashboard cards showing input/output costs
@@ -41,7 +57,6 @@
   - P10-005: DiffView component for future code diff
   - P10-006: search_sessions MCP tool
   - P10-007: SearchResult and SearchOptions type definitions
-  - See: docs/SEARCH_IMPLEMENTATION.md
 - **Bugfix**: React Query cache invalidation issue ✅
   - Fixed bookmark state not updating in list view after toggling on detail page
   - Updated SessionDetail.tsx to invalidate all related queries (['sessions'], ['search'])
@@ -301,6 +316,102 @@ import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 
 ---
 
+## Phase 14: Cache-First Loading Pattern ✅
+
+**Status**: Complete
+
+### Performance & UX Improvements
+
+| ID | Task | Priority | Status | Dependencies | Notes |
+|----|------|----------|--------|--------------|-------|
+| P14-001 | Apply cache-first pattern to all pages | P1 | ✅ | None | Instant page loads from localStorage |
+| P14-002 | Fix TypeScript compilation errors | P1 | ✅ | None | Type safety across all pages |
+| P14-003 | Document loading state best practices | P1 | ✅ | P14-001 | DEVELOPMENT_GUIDELINES.md updates |
+
+### Implementation Details
+
+**Cache-First Pattern:**
+```typescript
+// BEFORE (Wrong - Shows Loading on Refresh)
+const { data, isLoading } = useTodayStats();
+if (isLoading) return <Loading />;  // ❌ User sees this on refresh
+
+// AFTER (Correct - Instant Display with Cache)
+const { data, error } = useTodayStats();
+if (error) return <ErrorDisplay />;
+if (!data) return <Loading />;  // ✅ Only shows when no cache
+```
+
+**Pages Updated:**
+- Dashboard: `isLoading` → `!data`
+- Search: `isLoading` → `!results`
+- Statistics: `isLoading` → `!dailyStats`
+- DailyReport: `isLoading` → `!data`
+- Reports: `isLoading` → `!dailyStats`
+- SessionDetail: Multiple loading states fixed
+
+**TypeScript Fixes:**
+- Removed non-null assertions (`id!`)
+- Added explicit generic types to hooks
+- Added explicit type annotations to map/filter functions
+- Fixed state initialization with complex types
+
+**Performance Impact:**
+- Loading Time: 0ms (instant display from cache)
+- API Calls: Only background refreshes
+- User Experience: No loading indicator flickers
+
+---
+
+## Phase 13: Layout & Navigation Refactoring ✅
+
+**Status**: Complete
+
+### Navigation & Layout
+
+| ID | Task | Priority | Status | Dependencies | Notes |
+|----|------|----------|--------|--------------|-------|
+| P13-001 | Sidebar navigation (header → sidebar) | P1 | ✅ | None | Fixed width 256px, collapsed 64px |
+| P13-002 | Split Reports (List + Statistics) | P1 | ✅ | None | /reports list, /statistics analytics |
+| P13-003 | Daily Report insights/diary format | P1 | ✅ | P13-002 | Enhanced narrative timeline |
+| P13-004 | Collapse/expand functionality | P1 | ✅ | P13-001 | Ctrl/Cmd + B, edge click, Escape |
+| P13-005 | Active menu persistence | P1 | ✅ | P13-001 | Sub-pages keep parent active |
+| P13-006 | Timezone handling (local timezone) | P1 | ✅ | P13-003 | getLocalDateString() function |
+
+### Implementation Details
+
+**Navigation Structure:**
+- Sidebar (left): Dashboard, Sessions, Search, Reports, Statistics
+- Reports (`/reports`): Daily reports list with calendar view
+- Statistics (`/statistics`): Analytics dashboard with charts
+- Daily Report (`/reports/:date`): Individual report (insights/diary)
+
+**URL Structure:**
+```
+/reports           → Daily reports list
+/reports/:date     → Individual daily report
+/statistics        → Analytics dashboard
+```
+
+**Sidebar Interaction:**
+- Toggle button in header
+- Keyboard shortcut: Ctrl/Cmd + B
+- Edge click: Click right edge (12px from right) to collapse
+- Escape key: Collapse sidebar
+
+**Active Menu Persistence:**
+- `/sessions` → stays active on `/sessions/:id`
+- `/reports` → stays active on `/reports/:date`
+- `/` → only active on root path (exact match)
+
+**Layout Fixes:**
+- Fixed overflow issues (overflow-hidden parent, overflow-auto main)
+- Fixed layout shift during transitions
+- Text truncation with `truncate` classes and `min-w-0` containers
+- All nav items have `w-full` for consistent sizing
+
+---
+
 ## Phase 12: Performance Optimization ✅
 
 **Status**: Complete
@@ -412,16 +523,18 @@ export default defineConfig({
 | Phase 10: Full-Text Search | ✅ Complete | 7/7 (100%) |
 | Phase 11: Productivity Insights | 🚧 In Progress | 9/15 (60%) |
 | Phase 12: Performance Optimization | ✅ Complete | 2/2 (100%) |
+| Phase 13: Layout & Navigation Refactoring | ✅ Complete | 6/6 (100%) |
+| Phase 14: Cache-First Loading Pattern | ✅ Complete | 3/3 (100%) |
 
 ### By Priority
 
 | Priority | Total | Completed | In Progress | Todo |
 |----------|-------|-----------|-------------|------|
 | P0 (Critical) | 18 | 12 | 0 | 6 |
-| P1 (High) | 27 | 24 | 0 | 3 |
+| P1 (High) | 35 | 33 | 0 | 2 |
 | P2 (Medium) | 14 | 2 | 0 | 12 |
 | P3 (Low) | 4 | 0 | 0 | 4 |
-| **Total** | **65** | **38** | **0** | **27** |
+| **Total** | **73** | **47** | **0** | **24** |
 
 ---
 
@@ -482,4 +595,8 @@ Cleanup
 | Phase 5 (Enhanced Statistics) | 2026-01-19 | ✅ Complete |
 | Phase 6 (Enhanced Filtering) | 2026-01-19 | ✅ Complete |
 | Phase 10 (Full-Text Search) | 2026-01-19 | ✅ Complete |
+| Phase 11 (Productivity Insights) | 2026-01-19 | 🚧 In Progress |
+| Phase 12 (Performance Optimization) | 2026-01-19 | ✅ Complete |
+| Phase 13 (Layout & Navigation Refactoring) | 2026-01-19 | ✅ Complete |
+| Phase 14 (Cache-First Loading Pattern) | 2026-01-19 | ✅ Complete |
 | Production Ready | TBD | ⬜ Planned |

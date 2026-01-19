@@ -1,73 +1,27 @@
-import { useState, useMemo } from 'react';
-import { format, subDays } from 'date-fns';
-import { useDailyStats, useSessions } from '../lib/api';
-import type { DailyStats } from '@ccd/types';
-import { DateRangePicker } from '../components/ui/DateRangePicker';
-import { TokenTrendChart } from '../components/ui/TokenTrendChart';
-import { SessionBarChart } from '../components/ui/SessionBarChart';
-import { ProjectPieChart } from '../components/ui/ProjectPieChart';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { format, startOfMonth } from 'date-fns';
+import { useDailyStats } from '../lib/api';
 import { Card } from '../components/ui/Card';
-import { Filter } from 'lucide-react';
-import { extractProjectList } from '../lib/utils';
+import { DateRangePicker } from '../components/ui/DateRangePicker';
+import { FileText, Calendar, ChevronRight } from 'lucide-react';
+import { formatNumber } from '../lib/utils';
 
 export function Reports() {
+  const today = new Date();
   const [dateRange, setDateRange] = useState(() => ({
-    from: subDays(new Date(), 6),
-    to: new Date()
+    from: startOfMonth(today),
+    to: today
   }));
-  const [selectedProject, setSelectedProject] = useState<string>('');
 
-  const { data: allData } = useSessions();
-  const { data: dailyStats, isLoading, error } = useDailyStats(
+  const { data: dailyStats, error } = useDailyStats(
     dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
-    dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
-    undefined,
-    selectedProject || undefined
+    dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined
   );
-
-  const allSessions = allData?.sessions || [];
-  const projects = extractProjectList(allSessions);
 
   const stats = dailyStats || [];
 
-  const totalSessions = stats.reduce((sum: number, s: DailyStats) => sum + s.session_count, 0);
-  const totalMessages = stats.reduce((sum: number, s: DailyStats) => sum + s.message_count, 0);
-  const totalInputTokens = stats.reduce((sum: number, s: DailyStats) => sum + s.total_input_tokens, 0);
-  const totalOutputTokens = stats.reduce((sum: number, s: DailyStats) => sum + s.total_output_tokens, 0);
-  const avgSessionsPerDay = stats.length > 0 ? (totalSessions / stats.length).toFixed(1) : '0';
-
-  const projectData = useMemo(() => {
-    const filteredSessions = selectedProject
-      ? allSessions.filter((s) => s.project_name === selectedProject)
-      : allSessions.filter((s) => {
-          const sessionDate = new Date(s.started_at);
-          return sessionDate >= dateRange.from && sessionDate <= dateRange.to;
-        });
-
-    const projectCounts: Record<string, number> = {};
-    for (const session of filteredSessions) {
-      const project = session.project_name || 'Unknown';
-      projectCounts[project] = (projectCounts[project] || 0) + 1;
-    }
-
-    const total = Object.values(projectCounts).reduce((sum, count) => sum + count, 0);
-
-    return Object.entries(projectCounts)
-      .map(([name, value]) => ({
-        name,
-        value,
-        percentage: (value / total) * 100
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, [allSessions, selectedProject, dateRange]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
-      </div>
-    );
-  }
+  const sortedStats = [...stats].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   if (error) {
     return (
@@ -77,128 +31,101 @@ export function Reports() {
     );
   }
 
+  if (!dailyStats) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Reports</h1>
-        <div className="flex items-center gap-3">
-          <DateRangePicker
-            value={dateRange}
-            onChange={(value) => {
-              if (value.from && value.to) {
-                setDateRange({ from: value.from, to: value.to });
-              }
-            }}
-          />
-          {projects.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-              <select
-                value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
-                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
-              >
-                <option value="">All Projects</option>
-                {projects.map((project) => (
-                  <option key={project} value={project}>{project}</option>
-                ))}
-              </select>
-            </div>
-          )}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Daily Reports</h1>
+          <p className="text-muted-foreground mt-1">
+            {stats.length} days of activity data
+          </p>
         </div>
+
+        <DateRangePicker
+          value={dateRange}
+          onChange={(value) => {
+            if (value.from && value.to) {
+              setDateRange({ from: value.from, to: value.to });
+            }
+          }}
+        />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-        <Card className="p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Sessions</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalSessions}</p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Messages</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalMessages.toLocaleString()}</p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Input Tokens</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalInputTokens.toLocaleString()}</p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Output Tokens</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalOutputTokens.toLocaleString()}</p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Avg Sessions/Day</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{avgSessionsPerDay}</p>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Token Usage Trend</h2>
-          {stats.length > 0 ? (
-            <TokenTrendChart data={stats} height={250} />
-          ) : (
-            <div className="flex items-center justify-center h-[250px] text-gray-500 dark:text-gray-400">
-              No data available
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Sessions per Day</h2>
-          {stats.length > 0 ? (
-            <SessionBarChart data={stats} height={250} />
-          ) : (
-            <div className="flex items-center justify-center h-[250px] text-gray-500 dark:text-gray-400">
-              No data available
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Project Distribution</h2>
-          {projectData.length > 0 ? (
-            <ProjectPieChart data={projectData} height={250} />
-          ) : (
-            <div className="flex items-center justify-center h-[250px] text-gray-500 dark:text-gray-400">
-              No project data available
-            </div>
-          )}
-        </Card>
-      </div>
-
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Daily Statistics</h2>
-        {stats.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Date</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Sessions</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Messages</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Input Tokens</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Output Tokens</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.map((stat) => (
-                  <tr key={stat.date} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100">{stat.date}</td>
-                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100 text-right">{stat.session_count}</td>
-                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100 text-right">{stat.message_count.toLocaleString()}</td>
-                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100 text-right">{stat.total_input_tokens.toLocaleString()}</td>
-                    <td className="py-2 px-4 text-sm text-gray-900 dark:text-gray-100 text-right">{stat.total_output_tokens.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {sortedStats.length === 0 ? (
+        <Card className="p-12">
+          <div className="text-center text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No daily reports available for this period</p>
           </div>
-        ) : (
-          <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
-            No data available
-          </div>
-        )}
-      </Card>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {sortedStats.map((stat) => {
+            const dateObj = new Date(stat.date);
+            const isToday = format(dateObj, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
+            const totalCost = ((stat.total_input_cost || 0) + (stat.total_output_cost || 0)).toFixed(2);
+
+            return (
+              <Link
+                key={stat.date}
+                to={`/reports/${stat.date}`}
+                className="block"
+              >
+                <Card className="p-6 hover:border-blue-500 dark:hover:border-blue-400 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <h3 className="text-lg font-semibold">
+                          {isToday ? 'Today' : format(dateObj, 'EEEE, MMMM d, yyyy')}
+                        </h3>
+                        {isToday && (
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            Today
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-4 mt-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Sessions</p>
+                          <p className="text-lg font-semibold">{stat.session_count || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Messages</p>
+                          <p className="text-lg font-semibold">
+                            {formatNumber(stat.message_count || 0)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Tokens</p>
+                          <p className="text-lg font-semibold">
+                            {formatNumber((stat.total_input_tokens || 0) + (stat.total_output_tokens || 0))}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Cost</p>
+                          <p className="text-lg font-semibold">${totalCost}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <ChevronRight className="h-5 w-5 text-muted-foreground ml-4" />
+                  </div>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -9,18 +9,18 @@ Claude Code Daily and OpenCode session tracking plugin
 #### Method 1: Local Development (--plugin-dir)
 
 ```bash
-# Build the project
+# Build project
 cd /path/to/ccd
 pnpm install
 pnpm build
 
-# Run Claude Code with the plugin
+# Run Claude Code with plugin
 claude --plugin-dir /path/to/ccd/packages/ccd-plugin
 ```
 
 #### Method 2: Permanent Installation
 
-Add the plugin path to your `~/.claude/settings.json`:
+Add plugin path to your `~/.claude/settings.json`:
 
 ```json
 {
@@ -34,19 +34,13 @@ Add the plugin path to your `~/.claude/settings.json`:
 
 #### Copy to OpenCode config
 
-Copy the OpenCode plugin directory:
+The OpenCode plugin is automatically loaded from the project directory. No manual installation required!
 
-```bash
-cp -r /path/to/ccd/packages/ccd-plugin/.opencode ~/.config/opencode/
-```
+**Plugin Location:**
+- `packages/ccd-plugin/.opencode/plugin/ccd-tracker.ts`
+- `packages/ccd-plugin/.opencode/package.json`
 
-#### Or create a symlink (for development)
-
-```bash
-ln -s /path/to/ccd/packages/ccd-plugin/.opencode ~/.config/opencode/ccd-tracker
-```
-
-OpenCode will automatically load the plugin from `~/.config/opencode/plugins/` or `.opencode/plugins/`.
+**Note:** OpenCode automatically loads plugins from `.opencode/plugin/` directories within projects.
 
 ## Plugin Structure
 
@@ -64,8 +58,8 @@ ccd-plugin/
 │   │       └── stop.sh
 │   └── README.md
 └── .opencode/              # OpenCode plugin
-    ├── plugins/
-    │   └── ccd-tracker.ts  # OpenCode plugin
+    ├── plugin/
+    │   └── ccd-tracker.ts   # OpenCode plugin
     └── package.json
 ```
 
@@ -103,11 +97,11 @@ ccd-plugin/
 
 - `jq`: For JSON parsing
 - `curl`: For API calls
-- `bun`: For running the server in development
+- `bun`: For running the server
 
 ### OpenCode
 
-- `@opencode-ai/plugin`: Plugin API (provided by OpenCode)
+- `@opencode-ai/plugin`: Plugin API (provided by OpenCode, must be in `~/.config/opencode/package.json`)
 
 ## Testing
 
@@ -130,65 +124,25 @@ echo '{"session_id":"test","transcript_path":"/tmp/test","cwd":"/tmp"}' | \
 - **Unified Dashboard**: Both session types visible in CCD dashboard
 - **Token Tracking**: Input/output tokens for cost estimation
 - **Bookmarking**: Mark important sessions for quick reference
+- **Source Tagging**: Sessions tagged with 'claude' or 'opencode' source
 
+## Troubleshooting
 
-### Method 2: Permanent Installation
+### OpenCode Plugin Not Loading
 
-Add the plugin path to `~/.claude/settings.json`:
+1. **Check file location**: Ensure plugin file is at `~/.config/opencode/plugin/ccd-tracker.ts`
+2. **Check package.json**: Ensure `~/.config/opencode/package.json` contains `@opencode-ai/plugin` dependency
+3. **Restart OpenCode**: Restart OpenCode to reload plugins
+4. **Check logs**: Review OpenCode logs for plugin errors
 
-```json
-{
-  "pluginDirectories": [
-    "/path/to/ccd/packages/ccd-plugin"
-  ]
-}
-```
+### Server Not Starting
 
-## Plugin Structure
+1. **Verify server command**: Ensure `ccd-server` is installed and in PATH
+2. **Manual server start**: Try `ccd-server` command manually
+3. **Check logs**: Review `~/.ccd/server.log` for errors
 
-```
-ccd-plugin/
-├── .claude-plugin/
-│   └── plugin.json          # Plugin metadata
-├── commands/
-│   └── bookmark.md          # /ccd:bookmark command
-├── hooks/
-│   ├── hooks.json           # Hook configuration
-│   └── scripts/
-│       ├── session-start.sh # Runs on session start
-│       ├── user-prompt-submit.sh # Runs on prompt submit
-│       └── stop.sh          # Runs on session end
-└── README.md
-```
+### Sessions Not Appearing in Dashboard
 
-## Hook Behavior
-
-| Event | Action |
-|-------|--------|
-| `SessionStart` | Check/start server and register session |
-| `UserPromptSubmit` | Increment message count |
-| `Stop` | Process session end |
-
-## Environment Variables
-
-- `$CLAUDE_PLUGIN_ROOT`: Plugin directory path (automatically set by Claude Code)
-
-## Dependencies
-
-- `jq`: For JSON parsing
-- `curl`: For API calls
-- `bun`: For running server in development
-
-## Testing
-
-```bash
-# Check server status
-curl http://localhost:3847/api/v1/health
-
-# Check session list
-curl http://localhost:3847/api/v1/sessions
-
-# Manual hook script test
-echo '{"session_id":"test","transcript_path":"/tmp/test","cwd":"/tmp"}' | \
-  bash hooks/scripts/session-start.sh
-```
+1. **Verify server running**: `curl http://localhost:3847/api/v1/health`
+2. **Check database**: `sqlite3 ~/.ccd/ccd.db "SELECT * FROM sessions LIMIT 5;"`
+3. **Restart session**: Start a new OpenCode session to trigger plugin

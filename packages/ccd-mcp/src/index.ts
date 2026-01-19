@@ -410,7 +410,6 @@ server.tool(
         };
       }
 
-      // Save insights via API
       const response = await fetch(`${SERVER_URL}/api/v1/insights`, {
         method: "POST",
         headers: {
@@ -449,6 +448,126 @@ View at: http://localhost:${DASHBOARD_PORT}/sessions/${args.session_id}`,
           {
             type: "text" as const,
             text: `Failed to save insights: ${error}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+server.tool(
+  "generate_daily_report",
+  "Generate a daily report summarizing sessions, insights, and statistics for a specific date.",
+  {
+    date: z
+      .string()
+      .optional()
+      .describe("Date in YYYY-MM-DD format (default: today)"),
+  },
+  async ({ date }) => {
+    const isServerUp = await checkServerHealth();
+    if (!isServerUp) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: "CCD server is not running. Cannot generate daily report.",
+          },
+        ],
+      };
+    }
+
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    try {
+      const response = await fetch(
+        `${SERVER_URL}/api/v1/daily-report?date=${targetDate}`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      const report = result.data;
+
+      let text = `📊 Daily Report - ${report.date}\n`;
+      text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+      text += `📈 Summary\n`;
+      text += `• Sessions: ${report.summary.total_sessions}`;
+      if (report.summary.avg_session_duration) {
+        text += ` (Avg ${report.summary.avg_session_duration}m)`;
+      }
+      text += `\n`;
+      text += `• Messages: ${report.summary.total_messages}\n`;
+      text += `• Tokens: ${report.summary.total_tokens.toLocaleString()} (In ${report.stats.total_input_tokens.toLocaleString()}, Out ${report.stats.total_output_tokens.toLocaleString()})\n`;
+      text += `• Cost: $${report.summary.total_cost.toFixed(2)}\n`;
+      text += `• Bookmarks: ${report.summary.bookmarked_count}/${report.summary.total_sessions}\n`;
+      if (report.summary.projects.length > 0) {
+        text += `• Projects: ${report.summary.projects.join(', ')}\n`;
+      }
+
+      text += `\n🔥 Coding Streak: ${report.streak.current_streak} days (Longest ${report.streak.longest_streak} days)\n\n`;
+
+      text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+      if (report.sessions.length === 0) {
+        text += `📝 No sessions on this date.\n\n`;
+      } else {
+        text += `📝 Session List\n\n`;
+
+        report.sessions.forEach((session: any, idx: number) => {
+          text += `${idx + 1}. `;
+          if (session.is_bookmarked) text += `[⭐] `;
+          text += `${session.project_name || '(No Project)'}`;
+          if (session.summary) {
+            text += ` - ${session.summary}`;
+          }
+          text += `\n`;
+
+          const startTime = new Date(session.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          text += `   Time: ${startTime}`;
+          if (session.ended_at) {
+            const endTime = new Date(session.ended_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const duration = Math.round((new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 1000 / 60);
+            text += ` - ${endTime} (${duration}m)`;
+          }
+          text += `\n`;
+
+          if (session.insight) {
+            const insight = session.insight;
+            if (insight.key_learnings?.length > 0) {
+              text += `   ✨ Learnings: ${insight.key_learnings.join(', ')}\n`;
+            }
+            if (insight.problems_solved?.length > 0) {
+              text += `   ✅ Solved: ${insight.problems_solved.join(', ')}\n`;
+            }
+            if (insight.technologies?.length > 0) {
+              text += `   🛠️ Tech: ${insight.technologies.join(', ')}\n`;
+            }
+          }
+
+          text += `   🔗 Details: ${DASHBOARD_URL}/sessions/${session.id}\n\n`;
+        });
+      }
+
+      text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+      text += `🔗 View Full Report: ${DASHBOARD_URL}/daily-report?date=${targetDate}\n`;
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Failed to generate daily report: ${error}`,
           },
         ],
       };

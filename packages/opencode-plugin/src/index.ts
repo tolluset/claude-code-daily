@@ -1,6 +1,20 @@
 import type { Plugin } from '@opencode-ai/plugin';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 const CCD_SERVER_URL = 'http://localhost:3847/api/v1';
+const LOG_FILE = join(homedir(), '.ccd', 'plugin.log');
+
+function log(message: string, data?: unknown) {
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] ${message}${data ? ` ${JSON.stringify(data)}` : ''}\n`;
+  try {
+    writeFileSync(LOG_FILE, logEntry, { flag: 'a' });
+  } catch (error) {
+    console.error('[CCD Plugin] Failed to write to log file:', error);
+  }
+}
 
 interface SessionData {
   session_id: string;
@@ -46,17 +60,24 @@ async function startServer(): Promise<void> {
 
 async function createSession(data: SessionData): Promise<void> {
   try {
+    log('Making API call to create session:', data);
     const response = await fetch(`${CCD_SERVER_URL}/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
 
+    log('Session creation response status:', response.status);
     if (!response.ok) {
-      const error = await response.json();
-      console.error('Failed to create session:', error.error);
+      const errorText = await response.text();
+      log('Session creation error response:', errorText);
+      console.error('Failed to create session:', errorText);
+    } else {
+      const result = await response.json();
+      log('Session creation successful:', result);
     }
   } catch (error) {
+    log('Session creation exception:', error);
     console.error('Failed to create session:', error);
   }
 }
@@ -98,21 +119,26 @@ export const CCDPlugin: Plugin = async ({ project, directory }) => {
 
   return {
     event: async ({ event }) => {
+      log('Received event:', event);
       const eventData = event as { type: string; [key: string]: unknown };
 
       switch (eventData.type) {
         case 'session.created': {
+          log('Processing session.created event');
           const properties = eventData.properties as { sessionID?: string };
           const id = properties?.sessionID || (eventData.id as string) || (eventData.session as { id: string })?.id;
+          log('Extracted session ID:', id);
           if (!id)
             break;
 
           sessionId = id;
 
-          const isRunning = await ensureServerRunning();
-          if (!isRunning) {
-            await startServer();
-          }
+          // Skip server health check and startup - user runs server manually
+          log('Creating session with data:', {
+            session_id: id,
+            transcript_path: typeof project === 'string' ? project : (project as { path?: string })?.path || directory,
+            cwd: directory
+          });
 
           await createSession({
             session_id: id,
@@ -151,7 +177,7 @@ export const CCDPlugin: Plugin = async ({ project, directory }) => {
       const parts = output.parts;
       const content = parts.map(part => {
         if (part.type === 'text') return part.text;
-        if (part.type === 'image') return '[Image]';
+        // Handle other part types safely
         return '';
       }).join('\n');
 

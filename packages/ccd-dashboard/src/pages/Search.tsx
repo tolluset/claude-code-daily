@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Calendar, Clock, FileText, Star, X } from 'lucide-react';
-import { useSearchResults } from '../lib/api';
+import { Search, Calendar, Clock, FileText, Bookmark, X } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { MessageContent } from '../components/MessageContent';
+import { useDebounce } from '../hooks/useDebounce';
+import { useSearchResults } from '../lib/api';
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,6 +13,7 @@ export function SearchPage() {
   const [project, setProject] = useState(searchParams.get('project') || '');
   const [bookmarkedOnly, setBookmarkedOnly] = useState(searchParams.get('bookmarked') === 'true');
   const MAX_SEARCH_LENGTH = 200;
+  const DEBOUNCE_DELAY = 300;
 
   useEffect(() => {
     const currentQuery = searchParams.get('q') || '';
@@ -20,20 +22,8 @@ export function SearchPage() {
     setBookmarkedOnly(searchParams.get('bookmarked') === 'true');
   }, [searchParams]);
 
-  const { data: results, isLoading } = useSearchResults(
-    query,
-    searchParams.get('from') || undefined,
-    searchParams.get('to') || undefined,
-    project.trim() || undefined,
-    bookmarkedOnly,
-    20
-  );
-
-  const displayResults = results || [];
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedQuery = searchInput.trim();
+  const performSearch = useCallback((value: string) => {
+    const trimmedQuery = value.trim();
     if (trimmedQuery.length > MAX_SEARCH_LENGTH) {
       return;
     }
@@ -43,7 +33,34 @@ export function SearchPage() {
       if (project) params.set('project', project);
       if (bookmarkedOnly) params.set('bookmarked', 'true');
       setSearchParams(params, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
     }
+  }, [project, bookmarkedOnly, setSearchParams]);
+
+  const debouncedSearch = useDebounce<(value: string) => void>(performSearch, DEBOUNCE_DELAY);
+
+  const handleInputChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSearch(value);
+  };
+
+  const { data: results } = useSearchResults(
+    query,
+    searchParams.get('from') || undefined,
+    searchParams.get('to') || undefined,
+    project.trim() || undefined,
+    bookmarkedOnly,
+    20
+  );
+
+  const displayResults = Array.isArray(results) ? results : [];
+  if (import.meta.env.DEV && !Array.isArray(results)) {
+    console.error('Search results is not an array:', results);
+  }
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
   };
 
   const handleFilterChange = (key: string, value: string | boolean) => {
@@ -67,7 +84,7 @@ export function SearchPage() {
       case 'session_summary':
         return <Clock className="h-4 w-4 text-green-500" />;
       case 'bookmark_note':
-        return <Star className="h-4 w-4 text-yellow-500" />;
+        return <Bookmark className="h-4 w-4 text-yellow-500" />;
       default:
         return <FileText className="h-4 w-4 text-gray-400" />;
     }
@@ -86,7 +103,7 @@ export function SearchPage() {
               type="text"
               value={searchInput}
               maxLength={MAX_SEARCH_LENGTH}
-              onChange={(e) => setSearchInput(e.target.value)}
+              onChange={(e) => handleInputChange(e.target.value)}
               placeholder="Search sessions and messages..."
               className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -125,16 +142,16 @@ export function SearchPage() {
         )}
       </div>
 
-       {isLoading && query && (
-         <div className="flex items-center justify-center py-12">
-           <div className="flex items-center gap-3">
-             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-             <div className="text-gray-500">Searching...</div>
-           </div>
-         </div>
-       )}
+        {query && !results && (
+          <div className="flex items-center justify-center py-12">
+             <div className="flex items-center gap-3">
+               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+               <div className="text-gray-500">Searching...</div>
+             </div>
+          </div>
+        )}
 
-      {query && !isLoading && displayResults.length === 0 && (
+      {query && results && displayResults.length === 0 && (
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <Search className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -144,7 +161,7 @@ export function SearchPage() {
         </div>
       )}
 
-      {query && !isLoading && displayResults.length > 0 && (
+      {query && results && displayResults.length > 0 && (
         <div>
           <div className="mb-4 flex items-center justify-between">
             <div className="text-sm text-gray-600">
@@ -177,7 +194,7 @@ export function SearchPage() {
                         <span className="text-yellow-500">⭐</span>
                       )}
                       <span className="text-sm text-gray-600 flex items-center gap-1">
-                        <Star className="h-3 w-3" />
+                        <Bookmark className="h-3 w-3" />
                         {result.project_name || 'Unknown Project'}
                       </span>
                       <span className="text-sm text-gray-600 flex items-center gap-1">

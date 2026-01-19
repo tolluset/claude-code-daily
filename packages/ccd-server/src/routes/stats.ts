@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { getTodayStats, getTodaySessions, getDailyStats, getStreakStats } from '../db/queries';
-import type { ApiResponse, TodayStatsResponse, DailyStats, StreakStats } from '@ccd/types';
+import { getTodayStats, getTodaySessions, getDailyStats } from '../db/queries';
+import type { ApiResponse, TodayStatsResponse, DailyStats } from '@ccd/types';
 
 const stats = new Hono();
 
@@ -50,18 +50,6 @@ stats.get('/daily', (c) => {
   const response: ApiResponse<DailyStats[]> = {
     success: true,
     data: dailyStats
-  };
-
-  return c.json(response);
-});
-
-// Get coding streak statistics
-stats.get('/streak', (c) => {
-  const streakStats = getStreakStats();
-
-  const response: ApiResponse<StreakStats> = {
-    success: true,
-    data: streakStats
   };
 
   return c.json(response);

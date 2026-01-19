@@ -4,13 +4,11 @@ import { useMemo } from 'react';
 import { getTokenBreakdown, calculateTotalTokens } from '../../lib/token-utils';
 
 export function TokenUsageBadge() {
-  const { data: todayData, isLoading: todayLoading } = useTodayStats();
-  const { data: weeklyData, isLoading: weekLoading } = useDailyStats(undefined, undefined, 7);
-  const { data: monthlyData, isLoading: monthLoading } = useDailyStats(undefined, undefined, 30);
+  const { data: todayData } = useTodayStats();
+  const { data: weeklyData } = useDailyStats(undefined, undefined, 7);
+  const { data: monthlyData } = useDailyStats(undefined, undefined, 30);
 
-  const isLoading = todayLoading || weekLoading || monthLoading;
-
-  if (isLoading || !todayData) {
+  if (!todayData) {
     return (
       <div className="group relative flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 animate-pulse">
         <span className="text-lg">⚡</span>
@@ -40,7 +38,7 @@ export function TokenUsageBadge() {
       </div>
 
       <div className="
-        absolute top-full left-1/2 -translate-x-1/2 mt-2
+        absolute bottom-full left-1/2 -translate-x-1/2 mb-2
         opacity-0 invisible group-hover:opacity-100 group-hover:visible
         transition-all duration-200 z-50
       ">
@@ -66,7 +64,7 @@ export function TokenUsageBadge() {
               <span className="font-bold">{formatNumber(monthTokens.total)}</span>
             </div>
           </div>
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
         </div>
       </div>
     </div>
