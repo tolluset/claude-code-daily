@@ -21,6 +21,12 @@ fi
 # Extract project name (last directory of cwd)
 PROJECT_NAME=$(basename "$CWD")
 
+# Detect source (claude or opencode) from transcript_path
+SOURCE="claude"
+if echo "$TRANSCRIPT_PATH" | grep -qi "opencode"; then
+    SOURCE="opencode"
+fi
+
 # Extract git branch (if available)
 GIT_BRANCH=""
 if [ -d "$CWD/.git" ]; then
@@ -36,7 +42,7 @@ fi
 # 2. Start server with bun if not running
 if [ "$SERVER_RUNNING" = false ]; then
     mkdir -p "$CCD_DATA_DIR"
-    nohup bun run /Users/bh/workspaces/ccd/packages/ccd-server/src/index.ts > "$CCD_DATA_DIR/server.log" 2>&1 &
+    nohup bun ${CLAUDE_PLUGIN_ROOT}/scripts/server.js > "$CCD_DATA_DIR/server.log" 2>&1 &
     sleep 2
 fi
 
@@ -48,7 +54,8 @@ curl -s -X POST "$CCD_SERVER_URL/api/v1/sessions" \
         \"transcript_path\": \"$TRANSCRIPT_PATH\",
         \"cwd\": \"$CWD\",
         \"project_name\": \"$PROJECT_NAME\",
-        \"git_branch\": \"$GIT_BRANCH\"
+        \"git_branch\": \"$GIT_BRANCH\",
+        \"source\": \"$SOURCE\"
     }" > /dev/null 2>&1
 
 # 4. Clean empty sessions (async, non-blocking)

@@ -13,7 +13,9 @@ import { SERVER_PORT, DEFAULT_CLEANUP_INTERVAL_MS } from '@ccd/types';
 const IS_DEV = process.env.NODE_ENV === 'development' || process.argv.includes('--watch');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DASHBOARD_DIR = join(__dirname, '../dashboard');
+const DASHBOARD_DIR = process.env.CLAUDE_PLUGIN_ROOT
+  ? join(process.env.CLAUDE_PLUGIN_ROOT, 'dashboard/dist')
+  : join(__dirname, '../dashboard');
 
 // Cache dashboard index.html
 let dashboardIndexCache: string | null = null;

@@ -1,8 +1,9 @@
 {
   "mcpServers": {
     "ccd": {
-      "command": "bun",
-      "args": ["run", "${CLAUDE_PLUGIN_ROOT}/mcp/server.ts"]
+      "type": "stdio",
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/mcp-server.cjs"]
     }
   }
 }

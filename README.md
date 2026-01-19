@@ -70,12 +70,22 @@ The plugin automatically configures everything:
 **Alternative: From Source**
 
 ```bash
+# Clone and build
 git clone https://github.com/tolluset/claude-code-daily.git
 cd claude-code-daily
 pnpm install
-pnpm build
-claude --plugin-dir ./packages/ccd-plugin
+
+# Build and prepare plugin
+cd packages/ccd-plugin
+pnpm run build  # Builds all dependencies and copies artifacts
+
+# Install as local plugin
+claude plugin add /path/to/claude-code-daily/packages/ccd-plugin
 ```
+
+**Requirements:**
+- Node.js 18+ (for initial setup)
+- Bun is automatically installed on first session start
 
 ### First Steps
 
