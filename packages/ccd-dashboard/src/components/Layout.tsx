@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, FileText, Search, BarChart3, Moon, Sun, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, FileText, Search, BarChart3, Moon, Sun, PanelLeftClose, PanelLeftOpen, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from './ThemeProvider';
 import { TokenUsageBadge } from './ui/TokenUsageBadge';
@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from 'react';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Sessions', href: '/sessions', icon: MessageSquare },
+  { name: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
   { name: 'Search', href: '/search', icon: Search },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Statistics', href: '/statistics', icon: BarChart3 }

@@ -23,6 +23,8 @@ sessions.get('/', (c) => {
   const limit = parseIntParam(c.req.query('limit'));
   const offset = parseIntParam(c.req.query('offset'));
   const today = parseBoolParam(c.req.query('today'));
+  const bookmarkedOnly = parseBoolParam(c.req.query('bookmarkedOnly'));
+  const bookmarkedFirst = parseBoolParam(c.req.query('bookmarkedFirst')) ?? true;
 
   const sessionList = SessionService.getSessions({
     date: date || undefined,
@@ -31,7 +33,8 @@ sessions.get('/', (c) => {
     project: project || undefined,
     limit,
     offset,
-    bookmarkedFirst: true,
+    bookmarkedFirst,
+    bookmarkedOnly,
     today
   });
 

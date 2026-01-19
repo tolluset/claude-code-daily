@@ -49,7 +49,6 @@ export function useSessions(date?: string, from?: string, to?: string, project?:
   if (date) {
     params.set('date', date);
   } else if (!from && !to) {
-    // Only default to today if no date range is specified
     params.set('today', 'true');
   }
   if (from) params.set('from', from);
@@ -58,6 +57,22 @@ export function useSessions(date?: string, from?: string, to?: string, project?:
 
   const queryString = params.toString();
   const queryKey = ['sessions', date || 'today', from, to, project];
+
+  return useQuery({
+    queryKey,
+    queryFn: () => fetchApi<SessionListResponse>(`/sessions?${queryString}`, undefined, DASHBOARD_API_BASE)
+  });
+}
+
+export function useBookmarks(from?: string, to?: string, project?: string) {
+  const params = new URLSearchParams();
+  params.set('bookmarkedOnly', 'true');
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  if (project) params.set('project', project);
+
+  const queryString = params.toString();
+  const queryKey = ['bookmarks', from, to, project];
 
   return useQuery({
     queryKey,

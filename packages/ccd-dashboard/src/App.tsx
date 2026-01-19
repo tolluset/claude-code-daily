@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Sessions } from './pages/Sessions';
+import { Bookmarks } from './pages/Bookmarks';
 import { SessionDetail } from './pages/SessionDetail';
 import { Reports } from './pages/Reports';
 import { Statistics } from './pages/Statistics';
@@ -17,6 +18,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="sessions" element={<Sessions />} />
+          <Route path="bookmarks" element={<Bookmarks />} />
           <Route path="sessions/:id" element={<SessionDetail />} />
           <Route path="reports" element={<Reports />} />
           <Route path="reports/:date" element={<DailyReport />} />

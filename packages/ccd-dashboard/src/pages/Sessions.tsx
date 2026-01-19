@@ -59,8 +59,6 @@ export function Sessions() {
 
   const { sessions } = data;
   const today = formatDate(new Date().toISOString());
-  const bookmarked = sessions.filter(s => s.is_bookmarked);
-  const regular = sessions.filter(s => !s.is_bookmarked);
 
   const allSessions = allData?.sessions || [];
   const projects = extractProjectList(allSessions);
@@ -127,47 +125,18 @@ export function Sessions() {
         </div>
       </div>
 
-      {bookmarked.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Bookmark className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-              Bookmarks
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {bookmarked.map((session) => (
-                <SessionItem
-                  key={session.id}
-                  session={session}
-                  onBookmark={handleBookmark}
-                  onCopyId={handleCopyId}
-                  onDelete={handleDelete}
-                  copiedId={copiedId}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">All Sessions</CardTitle>
         </CardHeader>
         <CardContent>
-          {regular.length === 0 && bookmarked.length === 0 ? (
+          {sessions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No sessions today
             </div>
-          ) : regular.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">
-              No unbookmarked sessions
-            </div>
           ) : (
             <div className="space-y-2">
-              {regular.map((session) => (
+              {sessions.map((session) => (
                 <SessionItem
                   key={session.id}
                   session={session}
@@ -197,7 +166,7 @@ interface SessionItemProps {
   copiedId: string | null;
 }
 
-const SessionItem = memo(function SessionItem({ session, onBookmark, onCopyId, onDelete, copiedId }: SessionItemProps) {
+export const SessionItem = memo(function SessionItem({ session, onBookmark, onCopyId, onDelete, copiedId }: SessionItemProps) {
   const isActive = !session.ended_at;
 
   return (
