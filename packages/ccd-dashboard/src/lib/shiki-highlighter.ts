@@ -8,39 +8,30 @@ let highlighterInstance: Highlighter | null = null;
 let initializationPromise: Promise<Highlighter> | null = null;
 
 /**
- * Critical languages loaded on initialization
- * These are frequently used in Claude Code sessions
+ * All supported languages loaded on initialization
+ * Includes all commonly used languages in Claude Code sessions for immediate availability
  */
-const CRITICAL_LANGUAGES: BundledLanguage[] = [
+const SUPPORTED_LANGUAGES: BundledLanguage[] = [
+  // Core web languages
   'typescript',
   'javascript',
   'tsx',
   'jsx',
+  'html',
+  'css',
+  // Scripting and config
   'python',
   'json',
+  'yaml',
   'markdown',
   'bash',
   'shell',
-];
-
-/**
- * Optional languages loaded on-demand
- * These are less frequently used and loaded only when needed
- */
-const OPTIONAL_LANGUAGES: BundledLanguage[] = [
-  'html',
-  'css',
-  'yaml',
+  // Database and systems languages
   'sql',
   'rust',
   'go',
   'java',
 ];
-
-/**
- * All supported languages (for validation)
- */
-const SUPPORTED_LANGUAGES = [...CRITICAL_LANGUAGES, ...OPTIONAL_LANGUAGES];
 
 /**
  * Themes for light and dark modes
@@ -62,10 +53,10 @@ export async function getShikiHighlighter(): Promise<Highlighter> {
     return initializationPromise;
   }
 
-  // Start new initialization with critical languages only
+  // Start new initialization with all supported languages
   initializationPromise = createHighlighter({
     themes: SUPPORTED_THEMES,
-    langs: CRITICAL_LANGUAGES,
+    langs: SUPPORTED_LANGUAGES,
   });
 
   try {
@@ -87,33 +78,6 @@ export function preloadShikiHighlighter(): void {
   getShikiHighlighter().catch((error) => {
     console.error('Failed to preload Shiki highlighter:', error);
   });
-}
-
-/**
- * Load an optional language on-demand
- * This function is idempotent - safe to call multiple times for the same language
- */
-export async function loadOptionalLanguage(lang: BundledLanguage): Promise<void> {
-  // Only load if it's an optional language
-  if (!OPTIONAL_LANGUAGES.includes(lang)) {
-    return;
-  }
-
-  const highlighter = await getShikiHighlighter();
-  const loadedLanguages = highlighter.getLoadedLanguages();
-
-  // Skip if already loaded
-  if (loadedLanguages.includes(lang)) {
-    return;
-  }
-
-  try {
-    await highlighter.loadLanguage(lang);
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.error(`Failed to load optional language: ${lang}`, error);
-    }
-  }
 }
 
 /**
@@ -154,6 +118,7 @@ export function normalizeLanguage(lang: string | undefined): BundledLanguage {
 /**
  * Highlight code using Shiki
  * Returns HTML string with syntax highlighting
+ * All supported languages are loaded on initialization for immediate availability
  */
 export async function highlightCode(
   code: string,

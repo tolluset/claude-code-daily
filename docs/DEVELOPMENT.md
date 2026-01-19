@@ -85,6 +85,9 @@ pnpm run build        # Build plugin for distribution
 |----|----------|-------------|--------|
 | #1 | Low | Dashboard only supports Vite dev mode | Open |
 | #2 | Low | No date range history view (today only) | Open |
+| #3 | High | Log files grow indefinitely (32MB plugin.log) | Open |
+| #4 | Medium | Empty state missing onboarding guidance | Open |
+| #5 | Medium | No server status indicator in UI | Open |
 
 ---
 
@@ -463,6 +466,23 @@ claude plugin add .
 
 ### OpenCode Plugin
 
+**Development Location:** `packages/ccd-plugin/.opencode-plugin/`
+
+#### Development Workflow
+
+```bash
+# 1. Edit source code
+vim packages/ccd-plugin/.opencode-plugin/src/index.ts
+
+# 2. Build and install globally (from .opencode-plugin directory)
+cd packages/ccd-plugin/.opencode-plugin
+bun run install-global
+
+# 3. Restart OpenCode to apply changes
+```
+
+#### Manual Installation
+
 ```bash
 # Global installation
 mkdir -p ~/.config/opencode/plugins
@@ -472,6 +492,21 @@ EOF
 
 # Restart OpenCode
 ```
+
+#### Build Commands
+
+```bash
+# Build only (creates dist/index.js)
+bun run build
+
+# Build and install globally
+bun run install-global
+
+# Development mode
+bun run dev
+```
+
+**IMPORTANT:** After modifying the plugin code, you MUST run `bun run install-global` to update the global plugin at `~/.config/opencode/plugins/ccd.js`
 
 ### Database Migrations
 

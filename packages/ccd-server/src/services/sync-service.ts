@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { bulkInsertMessages, getSession, updateSessionSummary, deleteSession, decrementSessionCount } from '../db/queries';
+import { bulkInsertMessages, getSession, updateSessionSummary, deleteSession, decrementSessionCount, endSession } from '../db/queries';
 import type {
   TranscriptSyncRequest,
   TranscriptMessage,
@@ -112,6 +112,9 @@ export class SyncService {
       const summary = content.length > 100 ? content.slice(0, 97) + '...' : content;
       updateSessionSummary(sessionId, summary);
     }
+
+    // Mark session as ended
+    endSession(sessionId);
 
     return {
       inserted,

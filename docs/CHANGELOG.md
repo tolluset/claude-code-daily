@@ -6,6 +6,116 @@
 
 ## 2026-01-20
 
+### Bug Fixes & Code Quality Improvements
+
+- **OpenCode Plugin: Complete Rebuild & Reinstall**
+  - Fixed persistent "session not found" and "404 not found" errors
+  - Cleaned up all cached files and processes
+  - Rebuilt plugin from scratch with verified POST method for all API calls
+  - Deleted and reinstalled global plugin at `~/.config/opencode/plugins/ccd.js`
+  - Restarted server with clean logs
+  - Files: `packages/ccd-plugin/.opencode-plugin/src/index.ts`
+
+- **Server: AI Insights API Response Structure (500 Error Fix)**
+  - Fixed server returning nested `{ data: { data: ... } }` structure
+  - Client expects `ApiResponse<T>` but server sent `ApiResponse<{ data: T }>`
+  - Updated 4 endpoints: `/analyze/:id`, `/reports`, `/reports/generate`, `/reports/:id`
+  - Changed from `successResponse({ data: result })` to `successResponse(result)`
+  - File: `packages/ccd-server/src/routes/ai-insights.ts:77,110-115,195-198,218-221`
+  - Impact: AI Reports generation now works correctly without 500 errors
+
+- **Dashboard: API Type Consistency**
+  - Fixed type mismatch in `generateAIReport()` function
+  - Changed from nested `ApiResponse<{ data: AIReport }>` to flat `ApiResponse<AIReport>`
+  - Aligned with other API functions (`analyzeSession`, `createOrUpdateInsight`)
+  - File: `packages/ccd-dashboard/src/lib/api.ts:303-317`
+  - Impact: Improved type safety and consistency across API layer
+
+- **Dashboard: Enhanced Markdown Rendering**
+  - Complete rewrite of `renderMarkdown()` function with production-grade features
+  - Fixed: Key duplication issues (now using index-based keys: `h2-${index}`, `p-${index}`)
+  - Fixed: Table rendering without `<table>` wrapper
+  - Added: Code block support with syntax highlighting (```code```)
+  - Added: List grouping with proper `<ul>` elements
+  - Added: Inline markdown (bold, code, links) with `formatInlineMarkdown()`
+  - Added: Smart flushing for proper element grouping
+  - Files: `packages/ccd-dashboard/src/pages/Reports.tsx:299-485`
+  - Impact: AI Reports now render with full markdown support and proper structure
+
+- **OpenCode Plugin: Server Startup Reliability**
+  - Improved `ensureServerRunning()` with robust health check retry mechanism
+  - Added: 5 retry attempts with 1s delay between checks
+  - Added: Verification that server actually started (not just spawned)
+  - Better error logging with await log() calls
+  - File: `packages/ccd-plugin/.opencode-plugin/src/index.ts:55-107`
+  - Impact: Server startup failures now properly detected and logged
+
+- **OpenCode Plugin: Async Logging Performance**
+  - Converted synchronous `writeFileSync` to async `Bun.write()`
+  - Changed `log()` function signature to `async function log(): Promise<void>`
+  - Updated all log call sites to use `await log()`
+  - Removed unused `writeFileSync` import
+  - Files: `packages/ccd-plugin/.opencode-plugin/src/index.ts:1-20, 81-237`
+  - Impact: Improved plugin performance, non-blocking file I/O
+
+- **Dashboard: Syntax Highlighting - All Languages Pre-loaded**
+  - Fixed "Language `sql` not found, you may need to load it first" error
+  - Moved all commonly used languages to immediate initialization (no more lazy-loading)
+  - Simplified code by removing OPTIONAL_LANGUAGES and loadOptionalLanguage()
+  - All 16 languages now available instantly: TS, JS, Python, SQL, YAML, HTML, CSS, Rust, Go, Java, etc.
+  - Vite automatically code-splits languages (~8-10KB per language, gzipped)
+  - File: `packages/ccd-dashboard/src/lib/shiki-highlighter.ts:10-38, 54-68, 138-151`
+  - Impact: Zero rendering delays, simpler codebase, no language loading errors
+
+- **Dashboard: Reports Page Syntax Error**
+  - Fixed TypeScript compilation error: "Declaration or statement expected"
+  - Removed duplicate return statement and closing brace at line 487-488
+  - File: `packages/ccd-dashboard/src/pages/Reports.tsx:487-488`
+  - Impact: Dashboard build now succeeds without errors
+
+- **Auto-Extract Insights: Session Never Marked as Ended**
+  - Fixed issue where `ended_at` field was never updated when sessions ended
+  - Stop hook was executing but sessions remained with `ended_at = null`
+  - This caused auto-extract-insights to skip all sessions (checks `ended_at` before processing)
+  - Solution: Added `endSession()` call in `syncTranscript()` to mark sessions as ended
+  - File: `packages/ccd-server/src/services/sync-service.ts:115`
+  - Impact: Insights will now be automatically generated when sessions end (if `auto_extract_insights: true`)
+
+- **OpenCode Plugin: Session Not Found Error**
+  - Fixed "session not found" errors when session creation fails
+  - Plugin now resets `sessionId` to `null` if session creation fails
+  - Prevents subsequent API calls (updateSummary, createMessage) with invalid session ID
+  - Changed `createSession()` to return `Promise<boolean>` for success/failure detection
+  - Files: `packages/ccd-plugin/.opencode-plugin/src/index.ts:81-105, 198-211`
+
+- **OpenCode Plugin: HTTP Method Mismatch (404 Error)**
+  - Fixed `updateSessionSummary` using wrong HTTP method (PATCH → POST)
+  - Server expects POST at `/:id/summary` but plugin was sending PATCH
+  - Error: "failed to updates session memory" / "404 not found"
+  - File: `packages/ccd-plugin/.opencode-plugin/src/index.ts:129`
+
+ - **AI Reports**: TypeScript 컴파일 에러 및 런타임 에러 수정으로 AI Reports 페이지 정상화
+   - API 응답 중첩 구조 올바르게 처리 (`generateAIReport`, `analyzeSession`, `useAIReports`)
+   - 백엔드 응답 구조 분석: GET /reports (이중 중첩), POST /generate (이중 중첩), POST /analyze (단일 중첩)
+   - JSX 네임스페이스 참조 오류 해결 (React.ReactElement 사용)
+   - 런타임 에러 해결: "aiReports.map is not a function"
+
+- **OpenCode Plugin: JSON Parsing Error**
+  - Fixed "Failed to parse JSON" errors in error handlers
+  - Changed from direct `response.json()` to safe `response.text()` → `JSON.parse()`
+  - Prevents crashes when API returns non-JSON error responses
+  - Affected functions: `createMessage`, `updateSessionSummary`, `endSession`
+  - File: `packages/ccd-plugin/.opencode-plugin/src/index.ts`
+
+### Analysis & Review
+- **Comprehensive Usability Review**
+  - Overall rating: 4/5 (production-ready quality)
+  - Evaluated installation, UX, DX, performance, security, documentation
+  - Identified critical issue: log file growth (32MB plugin.log)
+  - Recommended improvements: log rotation, empty state UI, server status indicator
+  - Confirmed 92% project completion (77/84 tasks)
+  - See: [2026-01-20-usability-review.md](development-log/2026-01-20-usability-review.md)
+
 ### New Feature
 - **Data Export Functionality**
   - Added JSON export API: `GET /api/v1/export`

@@ -74,7 +74,7 @@ aiInsights.post('/analyze/:sessionId', async (c) => {
       );
     }
 
-    return c.json(successResponse({ data: analysis }));
+    return c.json(successResponse(analysis));
   } catch (e) {
     console.error('Analysis error:', e);
     return c.json(errorResponse(e instanceof Error ? e.message : 'Analysis failed'), 500);
@@ -107,12 +107,12 @@ aiInsights.get('/reports', async (c) => {
 
     const reports = db.query(query).all(...params);
 
-    return c.json(successResponse({
-      data: (reports as Record<string, unknown>[]).map(r => ({
+    return c.json(successResponse(
+      (reports as Record<string, unknown>[]).map(r => ({
         ...r,
         stats_snapshot: r.stats_snapshot ? JSON.parse(r.stats_snapshot as string) : null
       }))
-    }));
+    ));
   } catch (e) {
     console.error('Reports fetch error:', e);
     return c.json(errorResponse('Failed to fetch reports'), 500);
@@ -193,10 +193,8 @@ aiInsights.post('/reports/generate', async (c) => {
     ).get(type, reportDate) as Record<string, unknown>;
 
     return c.json(successResponse({
-      data: {
-        ...report,
-        stats_snapshot: JSON.parse(report.stats_snapshot as string)
-      }
+      ...report,
+      stats_snapshot: JSON.parse(report.stats_snapshot as string)
     }));
   } catch (e) {
     console.error('Report generation error:', e);
@@ -218,10 +216,8 @@ aiInsights.get('/reports/:id', async (c) => {
 
     const reportData = report as Record<string, unknown>;
     return c.json(successResponse({
-      data: {
-        ...reportData,
-        stats_snapshot: reportData.stats_snapshot ? JSON.parse(reportData.stats_snapshot as string) : null
-      }
+      ...reportData,
+      stats_snapshot: reportData.stats_snapshot ? JSON.parse(reportData.stats_snapshot as string) : null
     }));
   } catch (e) {
     console.error('Report fetch error:', e);

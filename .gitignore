@@ -6,3 +6,6 @@ dist/
 .opencode
 
 logs/
+
+# Claude Code development files
+.claude/

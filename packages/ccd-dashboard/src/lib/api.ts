@@ -294,8 +294,8 @@ export function useAIReports(type?: string, date?: string) {
   return useQuery({
     queryKey,
     queryFn: async () => {
-      const response = await fetchApi<AIReport[]>(`/ai-insights/reports${queryString ? `?${queryString}` : ''}`, undefined, DASHBOARD_API_BASE);
-      return response ?? [];
+      const response = await fetchApi<{ data: AIReport[] }>(`/ai-insights/reports${queryString ? `?${queryString}` : ''}`, undefined, DASHBOARD_API_BASE);
+      return response?.data ?? [];
     }
   });
 }
@@ -307,14 +307,14 @@ export async function generateAIReport(type: 'daily' | 'weekly' | 'monthly' = 'd
     body: JSON.stringify({ type, date })
   });
 
-  const data = await response.json() as ApiResponse<{ data: AIReport }>;
-  if (!data.success) {
-    throw new Error(data.error || 'Failed to generate report');
+  const result = await response.json() as ApiResponse<AIReport>;
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to generate report');
   }
-  if (!data.data) {
+  if (!result.data) {
     throw new Error('No data returned');
   }
-  return data.data;
+  return result.data;
 }
 
 export async function analyzeSession(sessionId: string): Promise<SessionAnalysis> {
@@ -322,12 +322,12 @@ export async function analyzeSession(sessionId: string): Promise<SessionAnalysis
     method: 'POST'
   });
 
-  const data = await response.json() as ApiResponse<{ data: SessionAnalysis }>;
-  if (!data.success) {
-    throw new Error(data.error || 'Failed to analyze session');
+  const result = await response.json() as ApiResponse<SessionAnalysis>;
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to analyze session');
   }
-  if (!data.data) {
+  if (!result.data) {
     throw new Error('No data returned');
   }
-  return data.data;
+  return result.data;
 }

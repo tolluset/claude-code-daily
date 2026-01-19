@@ -1799,6 +1799,26 @@ var migrations = [
       DROP TABLE IF EXISTS insights_fts;
       DROP TABLE IF EXISTS session_insights;
     `
+  },
+  {
+    name: "007_add_ai_reports",
+    up: `
+      CREATE TABLE IF NOT EXISTS ai_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_type TEXT NOT NULL,
+        report_date TEXT NOT NULL,
+        content TEXT NOT NULL,
+        stats_snapshot TEXT,
+        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(report_type, report_date)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_reports_type ON ai_reports(report_type);
+      CREATE INDEX IF NOT EXISTS idx_reports_date ON ai_reports(report_date);
+    `,
+    down: `
+      DROP TABLE IF EXISTS ai_reports;
+    `
   }
 ];
 function getAppliedMigrations() {
@@ -2640,6 +2660,7 @@ class SyncService {
       const summary = content.length > 100 ? content.slice(0, 97) + "..." : content;
       updateSessionSummary(sessionId, summary);
     }
+    endSession(sessionId);
     return {
       inserted,
       total: transcriptMessages.length
@@ -2669,6 +2690,9 @@ function errorResponse(message) {
     success: false,
     error: message
   };
+}
+function notFoundResponse(resource = "Resource") {
+  return errorResponse(`${resource} not found`);
 }
 function apiErrorHandler() {
   return async (c, next) => {
@@ -3055,6 +3079,376 @@ dailyReport.get("/", (c) => {
   };
   return c.json(response);
 });
+// src/services/ai-insights/claude-provider.ts
+class ClaudeProvider {
+  apiKey;
+  baseUrl = "https://api.anthropic.com/v1/messages";
+  constructor(apiKey) {
+    this.apiKey = apiKey || process.env.ANTHROPIC_API_KEY || "";
+    if (!this.apiKey) {
+      throw new Error("ANTHROPIC_API_KEY is required");
+    }
+  }
+  async analyze(session, messages2) {
+    const metrics = this.calculateEfficiencyMetrics(session, messages2);
+    const prompt = this.buildAnalysisPrompt(session, messages2, metrics);
+    const response = await this.callLLM(`You are a code analysis expert. Analyze the following Claude Code session and extract insights in JSON format.
+
+${prompt}
+
+Respond with JSON only, no markdown or explanations.`);
+    const result = JSON.parse(response);
+    return {
+      session_id: session.id,
+      summary: result.summary || session.summary || "Untitled session",
+      key_learnings: result.key_learnings || [],
+      problems_solved: result.problems_solved || [],
+      code_patterns: result.code_patterns || [],
+      technologies: result.technologies || [],
+      task_type: result.task_type || "other",
+      difficulty: result.difficulty || "medium",
+      efficiency_score: this.calculateEfficiencyScore(metrics),
+      retry_count: metrics.retry_messages,
+      topic_keywords: result.topic_keywords || []
+    };
+  }
+  async detectPatterns(analyses) {
+    if (analyses.length < 3)
+      return [];
+    const prompt = `Analyze the following session analyses and detect patterns:
+
+${JSON.stringify(analyses, null, 2)}
+
+Detect:
+1. Repeated topics (appearing 3+ times)
+2. Common error patterns
+3. Frequent technologies/stack
+
+For each pattern, provide:
+- pattern_type: "repeated_topic", "common_error", or "frequent_tech"
+- description: Clear description
+- suggestion: How to improve or learn more
+
+Respond with JSON array only.`;
+    const response = await this.callLLM(prompt);
+    const patterns = JSON.parse(response);
+    return patterns.map((p) => ({
+      ...p,
+      occurrences: this.countPatternOccurrences(p, analyses),
+      session_ids: this.getRelatedSessionIds(p, analyses)
+    }));
+  }
+  async generateReport(data) {
+    const prompt = this.buildReportPrompt(data);
+    const response = await this.callLLM(prompt);
+    return response;
+  }
+  async callLLM(prompt) {
+    const response = await fetch(this.baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": this.apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 4096,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      })
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Claude API error: ${response.status} ${error}`);
+    }
+    const data = await response.json();
+    return data.content[0].text;
+  }
+  calculateEfficiencyMetrics(session, messages2) {
+    const userMessages = messages2.filter((m) => m.type === "user");
+    const retryKeywords = ["다시", "수정", "에러", "error", "fix", "fix it", "retry", "again"];
+    const retryMessages = userMessages.filter((m) => retryKeywords.some((k) => m.content?.toLowerCase().includes(k))).length;
+    const fileEdits = {};
+    messages2.forEach((m) => {
+      const fileMatch = m.content?.match(/([a-zA-Z0-9_\-./]+\.(ts|tsx|js|jsx|py|go|rs|sql|sh|md))/);
+      if (fileMatch) {
+        fileEdits[fileMatch[1]] = (fileEdits[fileMatch[1]] || 0) + 1;
+      }
+    });
+    const sameFileEdits = Math.max(...Object.values(fileEdits), 0) - 1;
+    const errorMessages = messages2.filter((m) => m.content?.toLowerCase().includes("error") || m.content?.toLowerCase().includes("exception")).length;
+    return {
+      turns_to_complete: userMessages.length,
+      retry_messages: retryMessages,
+      same_file_edits: Math.max(0, sameFileEdits),
+      error_recovery_count: errorMessages
+    };
+  }
+  calculateEfficiencyScore(metrics) {
+    let score = 100;
+    if (metrics.turns_to_complete > 10)
+      score -= (metrics.turns_to_complete - 10) * 2;
+    score -= metrics.retry_messages * 5;
+    score -= Math.max(0, metrics.same_file_edits - 2) * 3;
+    return Math.max(0, Math.min(100, score));
+  }
+  buildAnalysisPrompt(session, messages2, metrics) {
+    const messagesPreview = messages2.map((m) => `[${m.type}]: ${m.content?.slice(0, 300)}...`).join(`
+
+`);
+    return `## Session Information
+- Project: ${session.project_name || "Unknown"}
+- Started: ${session.started_at}
+- Ended: ${session.ended_at || "In progress"}
+- Source: ${session.source}
+- Total Messages: ${messages2.length}
+
+## Efficiency Metrics
+- Turns to complete: ${metrics.turns_to_complete}
+- Retry messages: ${metrics.retry_messages}
+- Same file edits: ${metrics.same_file_edits}
+
+## Messages (Preview)
+${messagesPreview}
+
+## Analysis Request
+Extract the following information:
+1. summary: One-line summary (max 100 chars)
+2. task_type: One of - bug_fix, feature, refactor, learning, config, docs, other
+3. difficulty: easy, medium, or hard
+4. key_learnings: Array of max 3 things learned
+5. problems_solved: Array of max 3 problems solved
+6. code_patterns: Array of max 3 code patterns used
+7. technologies: Array of max 5 technologies/frameworks used
+8. topic_keywords: Array of max 5 keywords for search (e.g., "typescript", "hooks", "api")
+
+Respond with JSON only.`;
+  }
+  buildReportPrompt(data) {
+    return `Generate a ${data.type} report for ${data.date}.
+
+## Statistics
+- Sessions: ${data.stats.session_count}
+- Messages: ${data.stats.message_count}
+- Input Tokens: ${data.stats.total_input_tokens}
+- Output Tokens: ${data.stats.total_output_tokens}
+- Estimated Cost: $${(data.stats.total_input_cost + data.stats.total_output_cost).toFixed(4)}
+
+${data.patterns && data.patterns.length > 0 ? `
+## Detected Patterns
+${data.patterns.map((p) => `- ${p.description} (${p.occurrences} times)`).join(`
+`)}
+` : ""}
+
+## Session Analyses
+${data.sessions.slice(0, 5).map((s) => `- ${s.summary} (efficiency: ${s.efficiency_score}/100)`).join(`
+`)}
+
+Generate a well-formatted Markdown report with:
+1. Summary statistics
+2. Main tasks completed
+3. Key learnings
+4. Any warnings or patterns detected
+5. Suggestions for improvement
+
+Use emojis and clear formatting.`;
+  }
+  countPatternOccurrences(pattern, analyses) {
+    return analyses.filter((a) => a.summary?.toLowerCase().includes(pattern.description.toLowerCase()) || a.topic_keywords?.some((k) => pattern.description.toLowerCase().includes(k.toLowerCase()))).length;
+  }
+  getRelatedSessionIds(pattern, analyses) {
+    return analyses.filter((a) => a.summary?.toLowerCase().includes(pattern.description.toLowerCase()) || a.topic_keywords?.some((k) => pattern.description.toLowerCase().includes(k.toLowerCase()))).map((a) => a.session_id);
+  }
+}
+// src/routes/ai-insights.ts
+var aiInsights = new Hono2;
+var apiKey = process.env.ANTHROPIC_API_KEY;
+aiInsights.post("/analyze/:sessionId", async (c) => {
+  const { sessionId } = c.req.param();
+  try {
+    if (!apiKey) {
+      return c.json(errorResponse("ANTHROPIC_API_KEY not configured"), 500);
+    }
+    const session = db.query("SELECT * FROM sessions WHERE id = ?").get(sessionId);
+    if (!session) {
+      return c.json(notFoundResponse("Session"), 404);
+    }
+    const messages2 = db.query("SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC").all(sessionId);
+    if (messages2.length === 0) {
+      return c.json(errorResponse("No messages found for session"), 400);
+    }
+    const provider = new ClaudeProvider(apiKey);
+    const analysis = await provider.analyze(session, messages2);
+    const existingInsight = db.query("SELECT id FROM session_insights WHERE session_id = ?").get(sessionId);
+    if (existingInsight) {
+      db.prepare(`
+        UPDATE session_insights
+        SET summary = ?,
+            key_learnings = ?,
+            problems_solved = ?,
+            code_patterns = ?,
+            technologies = ?,
+            difficulty = ?
+        WHERE session_id = ?
+      `).run(analysis.summary, JSON.stringify(analysis.key_learnings), JSON.stringify(analysis.problems_solved), JSON.stringify(analysis.code_patterns), JSON.stringify(analysis.technologies), analysis.difficulty, sessionId);
+    } else {
+      db.prepare(`
+        INSERT INTO session_insights (
+          session_id, summary, key_learnings, problems_solved,
+          code_patterns, technologies, difficulty
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(sessionId, analysis.summary, JSON.stringify(analysis.key_learnings), JSON.stringify(analysis.problems_solved), JSON.stringify(analysis.code_patterns), JSON.stringify(analysis.technologies), analysis.difficulty);
+    }
+    return c.json(successResponse({ data: analysis }));
+  } catch (e) {
+    console.error("Analysis error:", e);
+    return c.json(errorResponse(e instanceof Error ? e.message : "Analysis failed"), 500);
+  }
+});
+aiInsights.get("/reports", async (c) => {
+  try {
+    const { type, date } = c.req.query();
+    let query = "SELECT * FROM ai_reports";
+    const conditions = [];
+    const params = [];
+    if (type) {
+      conditions.push("report_type = ?");
+      params.push(type);
+    }
+    if (date) {
+      conditions.push("report_date = ?");
+      params.push(date);
+    }
+    if (conditions.length > 0) {
+      query = `${query} WHERE ${conditions.join(" AND ")}`;
+    }
+    query += " ORDER BY generated_at DESC";
+    const reports = db.query(query).all(...params);
+    return c.json(successResponse({
+      data: reports.map((r) => ({
+        ...r,
+        stats_snapshot: r.stats_snapshot ? JSON.parse(r.stats_snapshot) : null
+      }))
+    }));
+  } catch (e) {
+    console.error("Reports fetch error:", e);
+    return c.json(errorResponse("Failed to fetch reports"), 500);
+  }
+});
+aiInsights.post("/reports/generate", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { type = "daily", date } = body;
+    if (!apiKey) {
+      return c.json(errorResponse("ANTHROPIC_API_KEY not configured"), 500);
+    }
+    const reportDate = date || new Date().toISOString().split("T")[0];
+    const existing = db.query("SELECT id FROM ai_reports WHERE report_type = ? AND report_date = ?").get(type, reportDate);
+    if (existing) {
+      return c.json(errorResponse("Report already exists for this date"), 409);
+    }
+    const stats2 = db.query(`
+      SELECT
+        COUNT(DISTINCT s.id) as session_count,
+        COUNT(m.id) as message_count,
+        COALESCE(SUM(m.input_tokens), 0) as total_input_tokens,
+        COALESCE(SUM(m.output_tokens), 0) as total_output_tokens,
+        COALESCE(SUM(m.input_cost), 0) as total_input_cost,
+        COALESCE(SUM(m.output_cost), 0) as total_output_cost
+      FROM sessions s
+      LEFT JOIN messages m ON s.id = m.session_id
+      WHERE date(s.started_at) = ?
+    `).get(reportDate);
+    const sessions2 = db.query(`
+      SELECT si.*, s.id as session_id, s.summary
+      FROM session_insights si
+      JOIN sessions s ON si.session_id = s.id
+      WHERE date(s.started_at) = ?
+    `).all(reportDate);
+    const provider = new ClaudeProvider(apiKey);
+    const reportContent = await provider.generateReport({
+      type,
+      date: reportDate,
+      sessions: sessions2.map((s) => ({
+        ...s,
+        key_learnings: JSON.parse(s.key_learnings || "[]"),
+        problems_solved: JSON.parse(s.problems_solved || "[]"),
+        code_patterns: JSON.parse(s.code_patterns || "[]"),
+        technologies: JSON.parse(s.technologies || "[]"),
+        task_type: "other",
+        difficulty: s.difficulty,
+        efficiency_score: 75,
+        retry_count: 0,
+        topic_keywords: []
+      })),
+      stats: stats2,
+      patterns: []
+    });
+    db.prepare(`
+      INSERT INTO ai_reports (report_type, report_date, content, stats_snapshot)
+      VALUES (?, ?, ?, ?)
+    `).run(type, reportDate, reportContent, JSON.stringify(stats2));
+    const report = db.query("SELECT * FROM ai_reports WHERE report_type = ? AND report_date = ?").get(type, reportDate);
+    return c.json(successResponse({
+      data: {
+        ...report,
+        stats_snapshot: JSON.parse(report.stats_snapshot)
+      }
+    }));
+  } catch (e) {
+    console.error("Report generation error:", e);
+    return c.json(errorResponse(e instanceof Error ? e.message : "Report generation failed"), 500);
+  }
+});
+aiInsights.get("/reports/:id", async (c) => {
+  const { id } = c.req.param();
+  try {
+    const report = db.query("SELECT * FROM ai_reports WHERE id = ?").get(id);
+    if (!report) {
+      return c.json(notFoundResponse("Report"), 404);
+    }
+    const reportData = report;
+    return c.json(successResponse({
+      data: {
+        ...reportData,
+        stats_snapshot: reportData.stats_snapshot ? JSON.parse(reportData.stats_snapshot) : null
+      }
+    }));
+  } catch (e) {
+    console.error("Report fetch error:", e);
+    return c.json(errorResponse("Failed to fetch report"), 500);
+  }
+});
+// src/routes/export.ts
+var exportRoute = new Hono2;
+exportRoute.get("/", (c) => {
+  const sessions2 = getSessions({});
+  const exportData = {
+    exported_at: new Date().toISOString(),
+    version: "0.1.1",
+    sessions: sessions2.map((session) => {
+      const messages2 = getMessages(session.id);
+      const insight = getSessionInsight(session.id);
+      return {
+        ...session,
+        messages: messages2,
+        insight
+      };
+    }),
+    daily_stats: getDailyStats({}),
+    model_pricing: db.prepare("SELECT * FROM model_pricing").all()
+  };
+  const filename = `ccd-export-${new Date().toISOString().split("T")[0]}.json`;
+  c.header("Content-Type", "application/json");
+  c.header("Content-Disposition", `attachment; filename="${filename}"`);
+  return c.json(exportData);
+});
 // ../../node_modules/.pnpm/hono@4.6.17/node_modules/hono/dist/middleware/cors/index.js
 var cors = (options) => {
   const defaults = {
@@ -3338,6 +3732,8 @@ app.route("/api/v1/sync", sync);
 app.route("/api/v1/search", search);
 app.route("/api/v1/insights", insights);
 app.route("/api/v1/daily-report", dailyReport);
+app.route("/api/v1/ai-insights", aiInsights);
+app.route("/api/v1/export", exportRoute);
 app.get("/", (c) => {
   return c.html(getDashboardIndex());
 });

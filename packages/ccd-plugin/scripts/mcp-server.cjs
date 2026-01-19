@@ -19410,6 +19410,34 @@ async function checkDashboardHealth() {
     return false;
   }
 }
+async function fetchFromApi(endpoint, options) {
+  try {
+    const isServerUp = await checkServerHealth();
+    if (!isServerUp) {
+      return {
+        success: false,
+        error: "CCD server is not running. Cannot access API."
+      };
+    }
+    const response = await fetch(`${SERVER_URL}/api/v1${endpoint}`, options);
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `HTTP ${response.status}`
+      };
+    }
+    const result = await response.json();
+    return { success: true, data: result };
+  } catch (error2) {
+    return { success: false, error: String(error2) };
+  }
+}
+function createTextResponse(text) {
+  return { content: [{ type: "text", text }] };
+}
+function createErrorResponse(error2) {
+  return createTextResponse(`\u274C ${error2}`);
+}
 async function openBrowser(url) {
   const cmd = process.platform === "darwin" ? `open "${url}"` : process.platform === "win32" ? `start "${url}"` : `xdg-open "${url}"`;
   await execAsync(cmd);
@@ -19461,42 +19489,12 @@ server.tool("open_dashboard", "Opens the Claude Code Daily dashboard in the defa
 server.tool("get_stats", "Get Claude Code session statistics including total sessions, messages, and token usage.", {
   period: exports_external.enum(["today", "week", "month", "all"]).optional().describe("Time period for statistics (default: today)")
 }, async ({ period = "today" }) => {
-  const isServerUp = await checkServerHealth();
-  if (!isServerUp) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: "CCD server is not running. Cannot fetch statistics."
-        }
-      ]
-    };
+  const result = await fetchFromApi(`/stats?period=${period}`);
+  if (!result.success) {
+    return createErrorResponse(result.error);
   }
-  try {
-    const response = await fetch(`${SERVER_URL}/api/v1/stats?period=${period}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const stats = await response.json();
-    const text = formatStats(stats, period);
-    return {
-      content: [
-        {
-          type: "text",
-          text
-        }
-      ]
-    };
-  } catch (error2) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Failed to fetch statistics: ${error2}`
-        }
-      ]
-    };
-  }
+  const text = formatStats(result.data, period);
+  return createTextResponse(text);
 });
 function formatStats(stats, period) {
   const lines = [
@@ -19518,65 +19516,29 @@ server.tool("search_sessions", "Search Claude Code sessions and messages by cont
   project: exports_external.string().optional().describe("Filter by project name"),
   days: exports_external.number().optional().describe("Limit search to last N days (default: 30)")
 }, async ({ query, project, days = 30 }) => {
-  const isServerUp = await checkServerHealth();
-  if (!isServerUp) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: "CCD server is not running. Cannot search sessions."
-        }
-      ]
-    };
+  const fromDate = new Date;
+  fromDate.setDate(fromDate.getDate() - days);
+  const params = new URLSearchParams({ q: query });
+  if (project)
+    params.set("project", project);
+  params.set("from", fromDate.toISOString().split("T")[0]);
+  const result = await fetchFromApi(`/search?${params}`);
+  if (!result.success) {
+    return createErrorResponse(result.error);
   }
-  try {
-    const fromDate = new Date;
-    fromDate.setDate(fromDate.getDate() - days);
-    const params = new URLSearchParams({ q: query });
-    if (project)
-      params.set("project", project);
-    params.set("from", fromDate.toISOString().split("T")[0]);
-    const response = await fetch(`${SERVER_URL}/api/v1/search?${params}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const { data: results } = await response.json();
-    if (!results || results.length === 0) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `No results found for "${query}"`
-          }
-        ]
-      };
-    }
-    const formatted = results.slice(0, 10).map((r, i) => `#${i + 1} [${r.project_name || "Unknown"}] (${r.timestamp})
+  const results = result.data;
+  if (!results || results.length === 0) {
+    return createTextResponse(`No results found for "${query}"`);
+  }
+  const formatted = results.slice(0, 10).map((r, i) => `#${i + 1} [${r.project_name || "Unknown"}] (${r.timestamp})
 Type: ${r.type}
 ${r.snippet.replace(/<[^>]*>/g, "")}
 \u2192 Session: http://localhost:${DASHBOARD_PORT}/sessions/${r.session_id}`).join(`
 
 `);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `\uD83D\uDD0D Search Results for "${query}" (${results.length} found)
+  return createTextResponse(`\uD83D\uDD0D Search Results for "${query}" (${results.length} found)
 
-${formatted}`
-        }
-      ]
-    };
-  } catch (error2) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Search failed: ${error2}`
-        }
-      ]
-    };
-  }
+${formatted}`);
 });
 server.tool("get_session_content", "Retrieves complete session content including all messages and metadata. Use this to analyze a session before extracting insights.", {
   session_id: exports_external.string().describe("Session ID to retrieve. Can be obtained from search or current session.")

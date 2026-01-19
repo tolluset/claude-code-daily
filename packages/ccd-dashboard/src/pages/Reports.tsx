@@ -299,56 +299,187 @@ export function Reports() {
 
 function renderMarkdown(content: string) {
   const lines = content.split('\n');
-  const elements: JSX.Element[] = [];
+  const elements: React.ReactElement[] = [];
+  let listItems: React.ReactElement[] = [];
+  let tableRows: React.ReactElement[] = [];
+  let inCodeBlock = false;
+  let codeLines: string[] = [];
 
-  for (const line of lines) {
-    if (line.startsWith('# ')) {
+  const flushList = () => {
+    if (listItems.length > 0) {
       elements.push(
-        <h2 key={line} className="text-2xl font-bold mt-6 mb-3">
+        <ul key={`list-${elements.length}`} className="list-disc ml-6 mb-4">
+          {listItems}
+        </ul>
+      );
+      listItems = [];
+    }
+  };
+
+  const flushTable = () => {
+    if (tableRows.length > 0) {
+      elements.push(
+        <table key={`table-${elements.length}`} className="min-w-full border-collapse mb-4">
+          <tbody>{tableRows}</tbody>
+        </table>
+      );
+      tableRows = [];
+    }
+  };
+
+  const flushCodeBlock = () => {
+    if (codeLines.length > 0) {
+      elements.push(
+        <pre key={`code-${elements.length}`} className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4 overflow-x-auto">
+          <code>{codeLines.join('\n')}</code>
+        </pre>
+      );
+      codeLines = [];
+    }
+  };
+
+  lines.forEach((line, index) => {
+    // Handle code blocks
+    if (line.startsWith('```')) {
+      if (inCodeBlock) {
+        flushCodeBlock();
+        inCodeBlock = false;
+      } else {
+        flushList();
+        flushTable();
+        inCodeBlock = true;
+      }
+      return;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(line);
+      return;
+    }
+
+    // Handle headings
+    if (line.startsWith('# ')) {
+      flushList();
+      flushTable();
+      elements.push(
+        <h2 key={`h2-${index}`} className="text-2xl font-bold mt-6 mb-3">
           {line.slice(2)}
         </h2>
       );
     } else if (line.startsWith('## ')) {
+      flushList();
+      flushTable();
       elements.push(
-        <h3 key={line} className="text-xl font-semibold mt-5 mb-2">
+        <h3 key={`h3-${index}`} className="text-xl font-semibold mt-5 mb-2">
           {line.slice(3)}
         </h3>
       );
     } else if (line.startsWith('### ')) {
+      flushList();
+      flushTable();
       elements.push(
-        <h4 key={line} className="text-lg font-medium mt-4 mb-2">
+        <h4 key={`h4-${index}`} className="text-lg font-medium mt-4 mb-2">
           {line.slice(4)}
         </h4>
       );
     } else if (line.startsWith('- ')) {
-      elements.push(
-        <li key={line} className="ml-4 mb-1">
+      flushTable();
+      listItems.push(
+        <li key={`li-${index}`} className="mb-1">
           {line.slice(2)}
         </li>
       );
     } else if (line.startsWith('| ') && line.endsWith(' |')) {
+      flushList();
       const cells = line.split('|').filter(c => c.trim());
-      elements.push(
-        <tr key={line}>
-          {cells.map((cell, idx) => (
-            <td key={idx} className="border border-gray-300 dark:border-gray-600 px-3 py-1">
-              {cell.trim()}
-            </td>
-          ))}
-        </tr>
-      );
+      // Skip separator rows like |---|---|
+      if (!cells.every(cell => cell.trim().match(/^-+$/))) {
+        tableRows.push(
+          <tr key={`tr-${index}`}>
+            {cells.map((cell, idx) => (
+              <td key={`td-${index}-${idx}`} className="border border-gray-300 dark:border-gray-600 px-3 py-2">
+                {cell.trim()}
+              </td>
+            ))}
+          </tr>
+        );
+      }
     } else if (line.startsWith('---')) {
-      elements.push(<hr key={line} className="my-4 border-gray-300 dark:border-gray-600" />);
+      flushList();
+      flushTable();
+      elements.push(<hr key={`hr-${index}`} className="my-4 border-gray-300 dark:border-gray-600" />);
     } else if (line.trim() === '') {
-      elements.push(<br key={line} />);
+      flushList();
+      flushTable();
+      elements.push(<div key={`space-${index}`} className="h-2" />);
     } else {
+      flushList();
+      flushTable();
+      // Handle bold and inline code
+      const formattedLine = formatInlineMarkdown(line);
       elements.push(
-        <p key={line} className="mb-2">
-          {line}
+        <p key={`p-${index}`} className="mb-2">
+          {formattedLine}
         </p>
       );
     }
-  }
+  });
+
+  // Flush any remaining items
+  flushList();
+  flushTable();
+  flushCodeBlock();
 
   return <div>{elements}</div>;
+}
+
+// Helper function to format inline markdown (bold, code, etc.)
+function formatInlineMarkdown(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  let currentIndex = 0;
+  let key = 0;
+
+  // Match **bold**, `code`, and [links](url)
+  const regex = /(\*\*[^*]+\*\*|`[^`]+`|\[([^\]]+)\]\(([^)]+)\))/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before match
+    if (match.index > currentIndex) {
+      parts.push(text.substring(currentIndex, match.index));
+    }
+
+    const matched = match[0];
+    if (matched.startsWith('**') && matched.endsWith('**')) {
+      // Bold
+      parts.push(
+        <strong key={`bold-${key++}`} className="font-semibold">
+          {matched.slice(2, -2)}
+        </strong>
+      );
+    } else if (matched.startsWith('`') && matched.endsWith('`')) {
+      // Inline code
+      parts.push(
+        <code key={`code-${key++}`} className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm">
+          {matched.slice(1, -1)}
+        </code>
+      );
+    } else if (match[2] && match[3]) {
+      // Link
+      parts.push(
+        <a key={`link-${key++}`} href={match[3]} className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">
+          {match[2]}
+        </a>
+      );
+    }
+
+    currentIndex = match.index + matched.length;
+  }
+
+  // Add remaining text
+  if (currentIndex < text.length) {
+    parts.push(text.substring(currentIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
 }

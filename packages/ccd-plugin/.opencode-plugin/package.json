@@ -1,6 +1,6 @@
 {
   "name": "ccd-opencode-plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +9,9 @@
     "build": "bun build src/index.ts --outdir dist --target bun --format esm",
     "dev": "bun run src/index.ts",
     "install-global": "bun run build && cp dist/index.js ~/.config/opencode/plugins/ccd.js"
+  },
+  "dependencies": {
+    "@ccd/client": "workspace:*"
   },
   "devDependencies": {
     "@opencode-ai/plugin": "^1.1.25",

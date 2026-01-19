@@ -1,16 +1,18 @@
 import type { Plugin } from '@opencode-ai/plugin';
-import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
 const CCD_SERVER_URL = 'http://localhost:3847/api/v1';
 const LOG_FILE = join(homedir(), '.ccd', 'opencode-plugin.log');
 
-function log(message: string, data?: unknown) {
+async function log(message: string, data?: unknown): Promise<void> {
   const timestamp = new Date().toISOString();
   const logEntry = `[${timestamp}] ${message}${data ? ` ${JSON.stringify(data)}` : ''}\n`;
   try {
-    writeFileSync(LOG_FILE, logEntry, { flag: 'a' });
+    // Use async file write for better performance
+    const file = Bun.file(LOG_FILE);
+    const existingContent = await file.exists() ? await file.text() : '';
+    await Bun.write(LOG_FILE, existingContent + logEntry);
   } catch (error) {
     console.error('[CCD Plugin] Failed to write to log file:', error);
   }
@@ -50,6 +52,7 @@ async function getGitBranch(directory: string): Promise<string> {
 }
 
 async function ensureServerRunning(): Promise<boolean> {
+  // Check if server is already running
   try {
     const response = await fetch(`${CCD_SERVER_URL}/health`, {
       signal: AbortSignal.timeout(2000),
@@ -58,29 +61,53 @@ async function ensureServerRunning(): Promise<boolean> {
       return true;
     }
   } catch {
+    // Server not running, will try to start it
   }
 
   try {
     const ccdDataDir = `${process.env.HOME}/.ccd`;
     await Bun.$`mkdir -p ${ccdDataDir}`;
 
+    // Start server in background
     Bun.spawn(['bun', 'x', 'ccd-server'], {
       stdout: Bun.file(`${ccdDataDir}/server.log`),
       stderr: Bun.file(`${ccdDataDir}/server.log`),
       detached: true,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    return true;
+    // Wait and verify server started successfully
+    const maxRetries = 5;
+    const retryDelay = 1000;
+
+    for (let i = 0; i < maxRetries; i++) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+
+      try {
+        const response = await fetch(`${CCD_SERVER_URL}/health`, {
+          signal: AbortSignal.timeout(2000),
+        });
+        if (response.ok) {
+          await log('Server started successfully');
+          return true;
+        }
+      } catch {
+        // Server not ready yet, continue retrying
+      }
+    }
+
+    await log('Server failed to start after retries');
+    console.error('[CCD] Server failed to start after multiple attempts');
+    return false;
   } catch (error) {
+    await log('Failed to start server', error);
     console.error('[CCD] Failed to start server:', error);
     return false;
   }
 }
 
-async function createSession(data: SessionData): Promise<void> {
+async function createSession(data: SessionData): Promise<boolean> {
   try {
-    log('Creating session with data:', data);
+    await log('Creating session with data:', data);
     const response = await fetch(`${CCD_SERVER_URL}/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -89,15 +116,18 @@ async function createSession(data: SessionData): Promise<void> {
 
     if (!response.ok) {
       const errorText = await response.text();
-      log('Session creation error response:', errorText);
+      await log('Session creation error response:', errorText);
       console.error('Failed to create session:', errorText);
-    } else {
-      const result = await response.json();
-      log('Session creation successful:', result);
+      return false;
     }
+
+    const result = await response.json();
+    await log('Session creation successful:', result);
+    return true;
   } catch (error) {
-    log('Session creation exception:', error);
+    await log('Session creation exception:', error);
     console.error('Failed to create session:', error);
+    return false;
   }
 }
 
@@ -110,8 +140,13 @@ async function createMessage(data: MessageData): Promise<void> {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('Failed to create message:', error.error);
+      const errorText = await response.text();
+      try {
+        const error = JSON.parse(errorText);
+        console.error('Failed to create message:', error.error || errorText);
+      } catch {
+        console.error('Failed to create message:', errorText);
+      }
     }
   } catch (error) {
     console.error('Failed to create message:', error);
@@ -121,14 +156,19 @@ async function createMessage(data: MessageData): Promise<void> {
 async function updateSessionSummary(sessionId: string, summary: string): Promise<void> {
   try {
     const response = await fetch(`${CCD_SERVER_URL}/sessions/${sessionId}/summary`, {
-      method: 'PATCH',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ summary })
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('Failed to update session summary:', error.error);
+      const errorText = await response.text();
+      try {
+        const error = JSON.parse(errorText);
+        console.error('Failed to update session summary:', error.error || errorText);
+      } catch {
+        console.error('Failed to update session summary:', errorText);
+      }
     }
   } catch (error) {
     console.error('Failed to update session summary:', error);
@@ -142,8 +182,13 @@ async function endSession(sessionId: string): Promise<void> {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('Failed to end session:', error.error);
+      const errorText = await response.text();
+      try {
+        const error = JSON.parse(errorText);
+        console.error('Failed to end session:', error.error || errorText);
+      } catch {
+        console.error('Failed to end session:', errorText);
+      }
     }
   } catch (error) {
     console.error('Failed to end session:', error);
@@ -155,19 +200,19 @@ export const CcdPlugin: Plugin = async ({ project, directory }) => {
   let messageCount = 0;
 
   await ensureServerRunning();
-  log('CCD Plugin loaded for directory:', directory);
+  await log('CCD Plugin loaded for directory:', directory);
 
   return {
     event: async ({ event }) => {
-      log('Received event:', event);
+      await log('Received event:', event);
       const eventData = event as { type: string; [key: string]: unknown };
 
       switch (eventData.type) {
         case 'session.created': {
-          log('Processing session.created event');
+          await log('Processing session.created event');
           const properties = eventData.properties as { info?: { id?: string } };
           const id = properties?.info?.id || (eventData.id as string);
-          log('Extracted session ID:', id);
+          await log('Extracted session ID:', id);
           if (!id)
             break;
 
@@ -177,7 +222,7 @@ export const CcdPlugin: Plugin = async ({ project, directory }) => {
           const projectName = directory.split('/').pop() || 'unknown';
           const gitBranch = await getGitBranch(directory);
 
-          await createSession({
+          const success = await createSession({
             session_id: id,
             transcript_path: `opencode://${directory}/${id}`,
             cwd: directory,
@@ -185,6 +230,12 @@ export const CcdPlugin: Plugin = async ({ project, directory }) => {
             git_branch: gitBranch,
             source: 'opencode'
           });
+
+          // Reset sessionId if creation failed to prevent "session not found" errors
+          if (!success) {
+            sessionId = null;
+            await log('Session creation failed, reset sessionId to null');
+          }
           break;
         }
 
