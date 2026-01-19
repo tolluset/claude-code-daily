@@ -67,6 +67,7 @@ export class QueryBuilder {
     limit?: number;
     offset?: number;
     bookmarkedFirst?: boolean;
+    bookmarkedOnly?: boolean;
   }): { query: string; params: (string | number)[] } {
     const conditions: string[] = [];
     const params: (string | number)[] = [];
@@ -86,6 +87,10 @@ export class QueryBuilder {
     if (options.project) {
       conditions.push("project_name = ?");
       params.push(options.project);
+    }
+
+    if (options.bookmarkedOnly) {
+      conditions.push("is_bookmarked = 1");
     }
 
     const orderBy = options.bookmarkedFirst

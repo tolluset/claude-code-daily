@@ -29,6 +29,7 @@ Dark mode implementation. ThemeProvider context, code block synchronization, loc
 
 ### Development Logs (docs/development-log/)
 Recent development logs documenting bug fixes, implementation details, and design decisions:
+- 2026-01-20-opencode-session-detection-fix.md: OpenCode session detection and source field fix for session registration
 - 2026-01-20-plugin-deployment-automation.md: Plugin deployment automation implementation (Bun auto-install, MCP auto-registration, build automation)
 - 2026-01-20-claude-mem-deployment-analysis.md: Claude-Mem plugin deployment strategy analysis and CCD application plan
 - 2026-01-20-standalone-binary-distribution.md: Initial standalone binary distribution planning (superseded by bunx approach)

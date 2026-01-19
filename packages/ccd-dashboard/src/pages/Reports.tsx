@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { format, startOfMonth } from 'date-fns';
 import { useDailyStats } from '../lib/api';
 import { Card } from '../components/ui/Card';
@@ -8,11 +8,25 @@ import { FileText, Calendar, ChevronRight } from 'lucide-react';
 import { formatNumber } from '../lib/utils';
 
 export function Reports() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const today = new Date();
-  const [dateRange, setDateRange] = useState(() => ({
-    from: startOfMonth(today),
-    to: today
-  }));
+
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>(() => {
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    
+    if (fromParam && toParam) {
+      return {
+        from: new Date(fromParam),
+        to: new Date(toParam)
+      };
+    }
+    
+    return {
+      from: startOfMonth(today),
+      to: today
+    };
+  });
 
   const { data: dailyStats, error } = useDailyStats(
     dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
@@ -54,6 +68,10 @@ export function Reports() {
           onChange={(value) => {
             if (value.from && value.to) {
               setDateRange({ from: value.from, to: value.to });
+              const newSearchParams = new URLSearchParams(searchParams);
+              newSearchParams.set('from', format(value.from, 'yyyy-MM-dd'));
+              newSearchParams.set('to', format(value.to, 'yyyy-MM-dd'));
+              setSearchParams(newSearchParams, { replace: true });
             }
           }}
         />

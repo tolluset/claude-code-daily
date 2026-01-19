@@ -507,9 +507,7 @@ server.tool(
         text += `• Projects: ${report.summary.projects.join(', ')}\n`;
       }
 
-      text += `\n🔥 Coding Streak: ${report.streak.current_streak} days (Longest ${report.streak.longest_streak} days)\n\n`;
-
-      text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+      text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
       if (report.sessions.length === 0) {
         text += `📝 No sessions on this date.\n\n`;

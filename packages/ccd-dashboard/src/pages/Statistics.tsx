@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { format, subDays } from 'date-fns';
 import { useDailyStats, useSessions } from '../lib/api';
 import type { DailyStats } from '@ccd/types';
@@ -11,11 +12,27 @@ import { Filter } from 'lucide-react';
 import { extractProjectList } from '../lib/utils';
 
 export function Statistics() {
-  const [dateRange, setDateRange] = useState(() => ({
-    from: subDays(new Date(), 6),
-    to: new Date()
-  }));
-  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>(() => {
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    
+    if (fromParam && toParam) {
+      return {
+        from: new Date(fromParam),
+        to: new Date(toParam)
+      };
+    }
+    
+    return {
+      from: subDays(new Date(), 6),
+      to: new Date()
+    };
+  });
+  const [selectedProject, setSelectedProject] = useState<string>(() => {
+    return searchParams.get('project') || '';
+  });
 
   const { data: allData } = useSessions();
   const { data: dailyStats, error } = useDailyStats(
@@ -87,6 +104,15 @@ export function Statistics() {
             onChange={(value) => {
               if (value.from && value.to) {
                 setDateRange({ from: value.from, to: value.to });
+                const newSearchParams = new URLSearchParams(searchParams);
+                newSearchParams.set('from', format(value.from, 'yyyy-MM-dd'));
+                newSearchParams.set('to', format(value.to, 'yyyy-MM-dd'));
+                if (selectedProject) {
+                  newSearchParams.set('project', selectedProject);
+                } else {
+                  newSearchParams.delete('project');
+                }
+                setSearchParams(newSearchParams, { replace: true });
               }
             }}
           />
@@ -95,7 +121,18 @@ export function Statistics() {
               <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               <select
                 value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
+                onChange={(e) => {
+                  setSelectedProject(e.target.value);
+                  const newSearchParams = new URLSearchParams(searchParams);
+                  newSearchParams.set('from', format(dateRange.from, 'yyyy-MM-dd'));
+                  newSearchParams.set('to', format(dateRange.to, 'yyyy-MM-dd'));
+                  if (e.target.value) {
+                    newSearchParams.set('project', e.target.value);
+                  } else {
+                    newSearchParams.delete('project');
+                  }
+                  setSearchParams(newSearchParams, { replace: true });
+                }}
                 className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
               >
                 <option value="">All Projects</option>

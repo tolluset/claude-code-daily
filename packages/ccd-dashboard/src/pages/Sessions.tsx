@@ -4,15 +4,30 @@ import { IconButton } from '@/components/ui/IconButton';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { formatDate, formatTime, formatDateForApi, extractProjectList } from '@/lib/utils';
 import { Bookmark, GitBranch, Clock, Copy, Check, Trash2, Filter } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useState, memo } from 'react';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import { ResumeHelpTooltip } from '@/components/ui/ResumeHelpTooltip';
 import type { Session } from '@ccd/types';
 
 export function Sessions() {
-  const [selectedProject, setSelectedProject] = useState<string>('');
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedProject, setSelectedProject] = useState<string>(() => {
+    return searchParams.get('project') || '';
+  });
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => {
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    
+    if (fromParam && toParam) {
+      return {
+        from: new Date(fromParam),
+        to: new Date(toParam)
+      };
+    }
+    
+    return {};
+  });
 
   const { data: allData } = useSessions();
   const { handleBookmark, handleCopyId, handleDelete, copiedId } = useSessionActions();
@@ -58,13 +73,48 @@ export function Sessions() {
           <p className="text-muted-foreground">{today} · {sessions.length} sessions</p>
         </div>
         <div className="flex items-center gap-3">
-          <DateRangePicker value={dateRange} onChange={setDateRange} />
+          <DateRangePicker
+            value={dateRange}
+            onChange={(value) => {
+              setDateRange(value);
+              const newSearchParams = new URLSearchParams(searchParams);
+              if (value.from && value.to) {
+                newSearchParams.set('from', formatDateForApi(value.from));
+                newSearchParams.set('to', formatDateForApi(value.to));
+              } else {
+                newSearchParams.delete('from');
+                newSearchParams.delete('to');
+              }
+              if (selectedProject) {
+                newSearchParams.set('project', selectedProject);
+              } else {
+                newSearchParams.delete('project');
+              }
+              setSearchParams(newSearchParams, { replace: true });
+            }}
+          />
           {projects.length > 0 && (
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <select
                 value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
+                onChange={(e) => {
+                  setSelectedProject(e.target.value);
+                  const newSearchParams = new URLSearchParams(searchParams);
+                  if (dateRange.from && dateRange.to) {
+                    newSearchParams.set('from', formatDateForApi(dateRange.from));
+                    newSearchParams.set('to', formatDateForApi(dateRange.to));
+                  } else {
+                    newSearchParams.delete('from');
+                    newSearchParams.delete('to');
+                  }
+                  if (e.target.value) {
+                    newSearchParams.set('project', e.target.value);
+                  } else {
+                    newSearchParams.delete('project');
+                  }
+                  setSearchParams(newSearchParams, { replace: true });
+                }}
                 className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800"
               >
                 <option value="">All Projects</option>

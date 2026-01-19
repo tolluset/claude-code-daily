@@ -40,8 +40,8 @@ export function DailyReport() {
     navigate(`/reports/${today}`);
   };
 
-  if (error) return <div className="text-center py-8 text-red-500">에러 발생</div>;
-  if (!data) return <div className="text-center py-8">로딩 중...</div>;
+  if (error) return <div className="text-center py-8 text-red-500">Error occurred</div>;
+  if (!data) return <div className="text-center py-8">Loading...</div>;
 
   const { sessions, summary } = data;
 
@@ -60,7 +60,7 @@ export function DailyReport() {
         <div>
           <div className="flex items-center gap-4 mb-2">
             <Calendar className="h-6 w-6 text-muted-foreground" />
-            <h1 className="text-3xl font-bold">오늘의 활동 일지</h1>
+            <h1 className="text-3xl font-bold">Daily Activity Log</h1>
           </div>
           <p className="text-muted-foreground text-lg">{formatDate(selectedDate)}</p>
         </div>
@@ -79,7 +79,7 @@ export function DailyReport() {
             onClick={handleToday}
             className="px-3 py-2 text-sm hover:bg-accent rounded-md transition-colors"
           >
-            오늘
+            Today
           </button>
           <button
             type="button"
@@ -97,8 +97,8 @@ export function DailyReport() {
         <Card className="p-12">
           <div className="text-center text-muted-foreground">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg">이 날짜에는 활동 기록이 없습니다</p>
-            <p className="text-sm mt-2">코딩을 시작해보세요!</p>
+            <p className="text-lg">No activity recorded for this date</p>
+            <p className="text-sm mt-2">Start coding!</p>
           </div>
         </Card>
       )}
@@ -109,15 +109,15 @@ export function DailyReport() {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">{summary.total_sessions}</p>
-                <p className="text-xs text-muted-foreground">세션</p>
+                <p className="text-xs text-muted-foreground">Sessions</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">{summary.total_messages}</p>
-                <p className="text-xs text-muted-foreground">메시지</p>
+                <p className="text-xs text-muted-foreground">Messages</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">{formatNumber(summary.total_tokens)}</p>
-                <p className="text-xs text-muted-foreground">토큰</p>
+                <p className="text-xs text-muted-foreground">Tokens</p>
               </div>
             </div>
           </Card>
@@ -127,7 +127,7 @@ export function DailyReport() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2">
                   <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                  오늘의 하이라이트
+                  Today's Highlights
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -140,7 +140,7 @@ export function DailyReport() {
                           {formatTime(session.started_at)}
                         </span>
                         <span className="text-sm font-medium">
-                          {session.project_name || '프로젝트'}
+                          {session.project_name || 'Project'}
                         </span>
                       </div>
                       {session.summary && (
@@ -158,7 +158,7 @@ export function DailyReport() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2">
                   <BookOpen className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                  오늘 배운 것
+                  What I Learned Today
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -192,7 +192,7 @@ export function DailyReport() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  해결한 문제
+                  Problems Solved
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -214,7 +214,7 @@ export function DailyReport() {
                           href={`/sessions/${session.id}`}
                           className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 inline-block"
                         >
-                          상세보기 →
+                          View Details →
                         </a>
                       </div>
                     </div>
@@ -226,7 +226,7 @@ export function DailyReport() {
 
            <Card className="p-6">
              <CardHeader className="pb-3">
-               <CardTitle>시간 순 활동 기록</CardTitle>
+                <CardTitle>Activity Timeline</CardTitle>
              </CardHeader>
              <CardContent>
                <div className="space-y-6">
@@ -249,12 +249,12 @@ export function DailyReport() {
                           </span>
                           {session.is_bookmarked && (
                             <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs rounded">
-                              ⭐ 하이라이트
+                              ⭐ Highlight
                             </span>
                           )}
                         </div>
                         <p className="text-sm mb-2">
-                          <span className="font-medium">{session.project_name || '프로젝트'}</span>
+                          <span className="font-medium">{session.project_name || 'Project'}</span>
                           {session.git_branch && (
                             <span className="text-muted-foreground"> ({session.git_branch})</span>
                           )}
@@ -274,12 +274,12 @@ export function DailyReport() {
                             ))}
                           </div>
                         )}
-                        <a
-                          href={`/sessions/${session.id}`}
-                          className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline mt-2 inline-block"
-                        >
-                          상세보기 →
-                        </a>
+                         <a
+                           href={`/sessions/${session.id}`}
+                           className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline mt-2 inline-block"
+                         >
+                           View Details →
+                         </a>
                       </div>
                     </div>
                   </div>

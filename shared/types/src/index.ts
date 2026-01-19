@@ -67,14 +67,6 @@ export interface DailyStats {
   total_output_cost: number;
 }
 
-// Streak stats types
-export interface StreakStats {
-  current_streak: number;
-  longest_streak: number;
-  total_active_days: number;
-  streak_start_date: string | null;
-}
-
 // API response types
 export interface ApiResponse<T> {
   success: boolean;
@@ -145,7 +137,6 @@ export interface SessionWithInsight extends Session {
 export interface DailyReportData {
   date: string;
   stats: DailyStats;
-  streak: StreakStats;
   sessions: SessionWithInsight[];
   summary: DailyReportSummary;
 }

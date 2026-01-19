@@ -34,16 +34,9 @@ export class SessionService {
     limit?: number;
     offset?: number;
     bookmarkedFirst?: boolean;
+    bookmarkedOnly?: boolean;
     today?: boolean;
   }): Session[] {
-    // Validate input parameters
-    if (options.date) validateDateString(options.date, 'date');
-    if (options.from) validateDateString(options.from, 'from');
-    if (options.to) validateDateString(options.to, 'to');
-    if (options.from || options.to) validateDateRange(options.from, options.to);
-    if (options.limit) validatePositiveInteger(options.limit, 'limit');
-    if (options.offset) validatePositiveInteger(options.offset, 'offset');
-
     if (options.today) {
       return getTodaySessions();
     }
@@ -55,7 +48,8 @@ export class SessionService {
       project: options.project,
       limit: options.limit,
       offset: options.offset,
-      bookmarkedFirst: options.bookmarkedFirst
+      bookmarkedFirst: options.bookmarkedFirst,
+      bookmarkedOnly: options.bookmarkedOnly
     });
   }
 

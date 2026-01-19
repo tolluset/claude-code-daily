@@ -5,7 +5,7 @@ import { MessageSquare, Zap, Bookmark, Activity, DollarSign } from 'lucide-react
 import { Link } from 'react-router-dom';
 
 export function Dashboard() {
-  // 캐시에서 직접 데이터를 읽어서 초기 표시
+  // Read data directly from cache for initial display
   const getCachedData = () => {
     try {
       const cached = localStorage.getItem('ccd-query-cache');

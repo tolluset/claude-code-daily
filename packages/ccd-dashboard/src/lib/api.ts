@@ -48,7 +48,8 @@ export function useSessions(date?: string, from?: string, to?: string, project?:
   const params = new URLSearchParams();
   if (date) {
     params.set('date', date);
-  } else {
+  } else if (!from && !to) {
+    // Only default to today if no date range is specified
     params.set('today', 'true');
   }
   if (from) params.set('from', from);
