@@ -307,6 +307,7 @@ export function Reports() {
   );
 }
 
+/* renderMarkdown function - temporarily disabled (used for AI Reports)
 function renderMarkdown(content: string) {
   const lines = content.split('\n');
   const elements: React.ReactElement[] = [];
@@ -493,3 +494,4 @@ function formatInlineMarkdown(text: string): React.ReactNode {
 
   return parts.length > 0 ? parts : text;
 }
+*/
