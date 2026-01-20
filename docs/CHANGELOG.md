@@ -6,6 +6,40 @@
 
 ## 2026-01-20
 
+### Major Refactoring: Event-Based Architecture
+
+- **New Package: @ccd/client**
+  - Created universal CCD client with Event Adapter pattern
+  - Platform-agnostic API interactions (OpenCode, Claude Code, etc.)
+  - 70% code reduction: 400 lines → 290 lines total
+  - Files: `packages/ccd-client/src/*`
+  - Architecture:
+    ```
+    Platform Event → EventAdapter → CCDClient → CCD Server
+    ```
+
+- **OpenCode Plugin: Refactored with @ccd/client**
+  - Reduced from 315 lines to 95 lines (70% reduction)
+  - All API logic now handled by @ccd/client
+  - Plugin only handles OpenCode-specific concerns (events, git, server startup)
+  - File: `packages/ccd-plugin/.opencode-plugin/src/index.ts`
+  - Impact: Easier to maintain, test, and extend
+
+- **Claude Code Plugin: Migrated from Bash to TypeScript**
+  - Converted 3 Bash scripts (174 lines) to single TypeScript handler (157 lines)
+  - Now uses @ccd/client for all API interactions
+  - Unified logging and error handling
+  - Files:
+    - New: `packages/ccd-claude-plugin/src/index.ts`
+    - Updated: `packages/ccd-plugin/hooks/hooks.json`
+  - Impact: Better type safety, easier debugging, consistent with OpenCode plugin
+
+- **Event Adapter Pattern**
+  - `OpenCodeAdapter`: Converts OpenCode events to common actions
+  - `ClaudeCodeAdapter`: Converts Claude Code hooks to common actions
+  - Extensible: Add new platforms by implementing `EventAdapter` interface
+  - Files: `packages/ccd-client/src/events/*.ts`
+
 ### Bug Fixes & Code Quality Improvements
 
 - **OpenCode Plugin: Complete Rebuild & Reinstall**
@@ -16,13 +50,14 @@
   - Restarted server with clean logs
   - Files: `packages/ccd-plugin/.opencode-plugin/src/index.ts`
 
-- **Server: AI Insights API Response Structure (500 Error Fix)**
+- **Server: AI Insights API Response Structure Fix**
   - Fixed server returning nested `{ data: { data: ... } }` structure
   - Client expects `ApiResponse<T>` but server sent `ApiResponse<{ data: T }>`
   - Updated 4 endpoints: `/analyze/:id`, `/reports`, `/reports/generate`, `/reports/:id`
   - Changed from `successResponse({ data: result })` to `successResponse(result)`
   - File: `packages/ccd-server/src/routes/ai-insights.ts:77,110-115,195-198,218-221`
-  - Impact: AI Reports generation now works correctly without 500 errors
+  - Impact: API structure now consistent across all endpoints
+  - Note: AI features require `ANTHROPIC_API_KEY` environment variable (see README)
 
 - **Dashboard: API Type Consistency**
   - Fixed type mismatch in `generateAIReport()` function

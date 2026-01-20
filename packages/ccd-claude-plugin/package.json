@@ -1,0 +1,17 @@
+{
+  "name": "ccd-claude-plugin",
+  "version": "0.3.0",
+  "type": "module",
+  "description": "Claude Code plugin for Claude Code Daily",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@ccd/client": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  }
+}

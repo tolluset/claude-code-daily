@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { format, startOfMonth } from 'date-fns';
-import { useDailyStats, useAIReports, generateAIReport, type AIReport } from '../lib/api';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useDailyStats /* , useAIReports, generateAIReport, type AIReport */ } from '../lib/api';
+// import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '../components/ui/Card';
 import { DateRangePicker } from '../components/ui/DateRangePicker';
-import { FileText, Calendar, ChevronRight, Sparkles, TrendingUp, Activity } from 'lucide-react';
+import { /* FileText, */ Calendar, ChevronRight, /* Sparkles, TrendingUp, */ Activity } from 'lucide-react';
 import { formatNumber } from '../lib/utils';
 import { buildQueryParams } from '../lib/query-params';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorState } from '../components/ui/ErrorState';
 
-type TabType = 'daily' | 'ai';
+type TabType = 'daily' /* | 'ai' */;
 
 export function Reports() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -121,7 +121,8 @@ export function Reports() {
         )}
       </div>
 
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      {/* Tabs temporarily hidden - AI Reports tab disabled until API key setup is simplified */}
+      {/* <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="flex gap-4">
           <button
             onClick={() => setActiveTab('daily')}
@@ -150,7 +151,7 @@ export function Reports() {
             </div>
           </button>
         </nav>
-      </div>
+      </div> */}
 
       {activeTab === 'daily' && (
         <>
@@ -224,7 +225,8 @@ export function Reports() {
         </>
       )}
 
-      {activeTab === 'ai' && (
+      {/* AI Reports tab content - temporarily disabled */}
+      {/* {activeTab === 'ai' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-3">
             {aiReports.length === 0 ? (
@@ -292,7 +294,7 @@ export function Reports() {
             )}
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }
