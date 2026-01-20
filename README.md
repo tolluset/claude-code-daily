@@ -39,8 +39,18 @@ A comprehensive analytics dashboard for Claude Code sessions. Track, analyze, an
 - **Task Type Detection** - Automatic classification: bug fix, feature, refactor, learning, etc.
 - **Difficulty Assessment** - easy, medium, hard categorization based on complexity
 - **AI Reports** - Generated daily/weekly reports with insights and trends (integrated in Reports page)
-- **Zero Configuration** - Uses Claude API for intelligent analysis
 - **Cost-Effective** - ~$1.50/month for daily use (5 sessions/day)
+
+**Setup Required:**
+```bash
+# Set your Anthropic API key (required for AI features)
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Add to your shell profile for persistence (~/.zshrc or ~/.bashrc)
+echo 'export ANTHROPIC_API_KEY="sk-ant-..."' >> ~/.zshrc
+```
+
+Get your API key from: https://console.anthropic.com/settings/keys
 
 ### User Experience
 - **Responsive Design** - Works seamlessly on desktop and tablet
