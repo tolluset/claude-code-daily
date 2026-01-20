@@ -9,3 +9,17 @@ logs/
 
 # Claude Code development files
 .claude/
+
+# Development logs
+docs/development-log/archive/
+
+# Archive directories
+docs/archive/
+archive/
+
+# Session test files
+session-*.json
+session-*.md
+
+# Build info
+*.tsbuildinfo

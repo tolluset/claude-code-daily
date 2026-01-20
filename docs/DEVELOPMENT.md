@@ -1,6 +1,6 @@
 # CCD Development Guide
 
-> Last Updated: 2026-01-20
+> Last Updated: 2026-01-21
 > Author: tolluset
 
 **Table of Contents:**
@@ -70,6 +70,7 @@ pnpm run build        # Build plugin for distribution
 
 ### Recent Milestones
 
+- ✅ 2026-01-21: Project Cleanup - Removed 30+ unnecessary files, consolidated TypeScript configs
 - ✅ 2026-01-20: Phase 2.1 - AI Insight Engine MVP (Claude API integration)
 - ✅ 2026-01-20: Phase 1.1 - N+1 Query Removal (10x performance improvement)
 - ✅ 2026-01-20: OpenCode Plugin Support
