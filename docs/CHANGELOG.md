@@ -6,6 +6,27 @@
 
 ## 2026-01-20
 
+### Plugin Deployment System Improvements
+
+- **Bug Fixes**
+  - Fixed ESM/CommonJS compatibility: Renamed `smart-install.js` to `smart-install.cjs`
+  - Fixed MCP runtime compatibility: Changed build target from Bun to Node.js
+  - Fixed plugin structure: Consolidated hook handlers into `lib/` directory
+  - Fixed build pipeline: Added `ccd-claude-plugin` to build process
+  - Fixed MCP server extension: Changed from `.cjs` to `.js` for ESM compatibility
+
+- **Testing Infrastructure**
+  - Added plugin installation test suite
+  - Created deployment simulation script (`test-plugin-install.sh`)
+  - Created automated verification script (`verify-plugin.sh`)
+  - Added CI/CD workflow for plugin testing
+  - New test command: `pnpm run test:plugin`
+
+- **Build System Improvements**
+  - MCP server now builds with Node.js target for universal compatibility
+  - Automatic shebang injection for executable scripts
+  - Proper handling of ESM modules in bundled output
+
 ### Major Refactoring: Event-Based Architecture
 
 - **New Package: @ccd/client**
@@ -65,6 +86,13 @@
   - Aligned with other API functions (`analyzeSession`, `createOrUpdateInsight`)
   - File: `packages/ccd-dashboard/src/lib/api.ts:303-317`
   - Impact: Improved type safety and consistency across API layer
+
+- **Dashboard: AI Reports Tab Temporarily Disabled**
+  - Hidden AI Reports tab until API key setup is simplified
+  - Removed tab navigation UI and associated state
+  - Commented out AI-related hooks and functions for future re-enablement
+  - File: `packages/ccd-dashboard/src/pages/Reports.tsx`
+  - Impact: Reports page now shows only Daily Stats (API key configuration required for AI features)
 
 - **Dashboard: Enhanced Markdown Rendering**
   - Complete rewrite of `renderMarkdown()` function with production-grade features

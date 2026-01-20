@@ -429,6 +429,32 @@ bun run test --watch
 - Search functionality
 - Insights management
 
+### Testing Plugin Installation
+
+배포 전 플러그인 설치를 로컬에서 테스트:
+
+```bash
+cd packages/ccd-plugin
+
+# 배포 시뮬레이션 + 검증
+pnpm run test:plugin
+
+# 또는 개별 실행
+pnpm run test:install  # 배포 구조 복사
+pnpm run test:verify   # 자동 검증
+```
+
+**테스트 검증 항목**:
+- ✓ smart-install.cjs 실행 가능
+- ✓ mcp-server.js Node.js 호환
+- ✓ lib/hooks.js 실행 가능
+- ✓ dashboard/dist 파일 존재
+- ✓ hooks.json 경로 정확성
+- ✓ 절대 경로 미포함
+- ✓ Shebang 정확성
+
+테스트 설치 위치: `~/.claude/plugins-test/ccd-plugin`
+
 ---
 
 ## Deployment

@@ -1,0 +1,48 @@
+name: Test Plugin Installation
+
+on:
+  pull_request:
+    paths:
+      - 'packages/ccd-plugin/**'
+      - 'packages/ccd-server/**'
+      - 'packages/ccd-mcp/**'
+      - 'packages/ccd-claude-plugin/**'
+  push:
+    branches: [main]
+
+jobs:
+  test-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Test plugin installation
+        run: |
+          cd packages/ccd-plugin
+          pnpm run test:plugin
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-plugin-artifacts
+          path: ~/.claude/plugins-test/

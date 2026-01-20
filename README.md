@@ -375,6 +375,36 @@ Contributions welcome! Before submitting a PR:
 
 For bugs or feature requests, please open an issue.
 
+## Troubleshooting
+
+### Installation Issues
+
+If you encounter errors during plugin installation:
+
+1. **Check Bun installation:**
+   ```bash
+   bun --version
+   ```
+
+2. **Verify plugin structure:**
+   ```bash
+   cd packages/ccd-plugin
+   pnpm run test:plugin
+   ```
+
+3. **Check logs:**
+   ```bash
+   tail -f ~/.ccd/hook.log
+   ```
+
+### Common Issues
+
+- **MCP server not starting**: Ensure Node.js 18+ is installed
+- **Dashboard not loading**: Check if server is running on port 3848
+- **Hook errors**: Verify `.claude/plugins/ccd/` has correct permissions
+
+For more help, see [DEVELOPMENT.md](docs/DEVELOPMENT.md) or open an issue.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.

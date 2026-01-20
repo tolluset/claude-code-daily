@@ -26,8 +26,11 @@ fi
 # 2. Copy MCP server
 echo "→ Copying ccd-mcp..."
 if [ -f "$PACKAGES_DIR/ccd-mcp/dist/index.js" ]; then
-    cp "$PACKAGES_DIR/ccd-mcp/dist/index.js" "$PLUGIN_DIR/scripts/mcp-server.cjs"
-    echo "  ✓ mcp-server.cjs"
+    cp "$PACKAGES_DIR/ccd-mcp/dist/index.js" "$PLUGIN_DIR/scripts/mcp-server.js"
+    # Ensure Node.js shebang
+    sed -i.bak '1s|^#!.*|#!/usr/bin/env node|' "$PLUGIN_DIR/scripts/mcp-server.js" || true
+    rm -f "$PLUGIN_DIR/scripts/mcp-server.js.bak"
+    echo "  ✓ mcp-server.js (Node.js ESM compatible)"
 else
     echo "  ✗ ccd-mcp/dist/index.js not found!"
     exit 1
@@ -42,6 +45,17 @@ if [ -d "$PACKAGES_DIR/ccd-dashboard/dist" ]; then
     echo "  ✓ dashboard/dist/"
 else
     echo "  ✗ ccd-dashboard/dist not found!"
+    exit 1
+fi
+
+# 4. Copy ccd-claude-plugin hooks
+echo "→ Copying ccd-claude-plugin..."
+mkdir -p "$PLUGIN_DIR/lib"
+if [ -f "$PACKAGES_DIR/ccd-claude-plugin/dist/index.js" ]; then
+    cp "$PACKAGES_DIR/ccd-claude-plugin/dist/index.js" "$PLUGIN_DIR/lib/hooks.js"
+    echo "  ✓ lib/hooks.js"
+else
+    echo "  ✗ ccd-claude-plugin/dist/index.js not found!"
     exit 1
 fi
 

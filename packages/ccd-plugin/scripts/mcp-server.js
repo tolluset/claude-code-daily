@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // @bun
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -18567,6 +18567,7 @@ class ExperimentalMcpServerTasks {
     return mcpServerInternal._createRegisteredTool(name, config2.title, config2.description, config2.inputSchema, config2.outputSchema, config2.annotations, execution, config2._meta, handler);
   }
 }
+
 // ../../node_modules/.pnpm/@modelcontextprotocol+sdk@1.25.2_hono@4.6.17_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
 class McpServer {
   constructor(serverInfo, options) {
@@ -19288,7 +19289,7 @@ var EMPTY_COMPLETION_RESULT = {
 };
 
 // ../../node_modules/.pnpm/@modelcontextprotocol+sdk@1.25.2_hono@4.6.17_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
-import process2 from "process";
+import process2 from "node:process";
 
 // ../../node_modules/.pnpm/@modelcontextprotocol+sdk@1.25.2_hono@4.6.17_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
 class ReadBuffer {
@@ -19377,7 +19378,6 @@ class StdioServerTransport {
     });
   }
 }
-
 // src/index.ts
 import { exec } from "child_process";
 import { promisify } from "util";

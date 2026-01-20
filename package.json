@@ -1,6 +1,6 @@
 {
   "name": "claude-code-daily",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Claude Code 세션 추적 및 시각화 대시보드",
   "scripts": {

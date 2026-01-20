@@ -3305,7 +3305,7 @@ aiInsights.post("/analyze/:sessionId", async (c) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(sessionId, analysis.summary, JSON.stringify(analysis.key_learnings), JSON.stringify(analysis.problems_solved), JSON.stringify(analysis.code_patterns), JSON.stringify(analysis.technologies), analysis.difficulty);
     }
-    return c.json(successResponse({ data: analysis }));
+    return c.json(successResponse(analysis));
   } catch (e) {
     console.error("Analysis error:", e);
     return c.json(errorResponse(e instanceof Error ? e.message : "Analysis failed"), 500);
@@ -3330,12 +3330,10 @@ aiInsights.get("/reports", async (c) => {
     }
     query += " ORDER BY generated_at DESC";
     const reports = db.query(query).all(...params);
-    return c.json(successResponse({
-      data: reports.map((r) => ({
-        ...r,
-        stats_snapshot: r.stats_snapshot ? JSON.parse(r.stats_snapshot) : null
-      }))
-    }));
+    return c.json(successResponse(reports.map((r) => ({
+      ...r,
+      stats_snapshot: r.stats_snapshot ? JSON.parse(r.stats_snapshot) : null
+    }))));
   } catch (e) {
     console.error("Reports fetch error:", e);
     return c.json(errorResponse("Failed to fetch reports"), 500);
@@ -3396,10 +3394,8 @@ aiInsights.post("/reports/generate", async (c) => {
     `).run(type, reportDate, reportContent, JSON.stringify(stats2));
     const report = db.query("SELECT * FROM ai_reports WHERE report_type = ? AND report_date = ?").get(type, reportDate);
     return c.json(successResponse({
-      data: {
-        ...report,
-        stats_snapshot: JSON.parse(report.stats_snapshot)
-      }
+      ...report,
+      stats_snapshot: JSON.parse(report.stats_snapshot)
     }));
   } catch (e) {
     console.error("Report generation error:", e);
@@ -3415,10 +3411,8 @@ aiInsights.get("/reports/:id", async (c) => {
     }
     const reportData = report;
     return c.json(successResponse({
-      data: {
-        ...reportData,
-        stats_snapshot: reportData.stats_snapshot ? JSON.parse(reportData.stats_snapshot) : null
-      }
+      ...reportData,
+      stats_snapshot: reportData.stats_snapshot ? JSON.parse(reportData.stats_snapshot) : null
     }));
   } catch (e) {
     console.error("Report fetch error:", e);

@@ -1,6 +1,6 @@
 {
   "name": "@ccd/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "bin": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun",
+    "build": "bun build src/index.ts --outdir dist --target node",
     "build:bin": "bun build src/index.ts --compile --outfile dist/ccd-mcp",
     "start": "bun run src/index.ts",
     "clean": "rm -rf dist"

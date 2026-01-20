@@ -1,6 +1,6 @@
 {
   "name": "@ccd/client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Universal CCD client for OpenCode, Claude Code, and other platforms",
   "type": "module",
   "main": "./dist/index.js",

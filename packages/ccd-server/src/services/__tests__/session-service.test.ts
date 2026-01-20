@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
-import { SessionService } from '../services/session-service';
-import { TestDataFactory } from '../__mocks__/test-helpers';
+import { describe, it, expect, beforeEach, vi } from 'bun:test';
+import { SessionService } from '../session-service';
+import { TestDataFactory } from '../../__mocks__/test-helpers';
 
 // Mock database
 vi.mock('../db/queries', () => ({

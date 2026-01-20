@@ -1,6 +1,6 @@
 {
   "name": "@ccd/server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "type": "module",
   "bin": {
@@ -21,6 +21,7 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
+    "@ccd/types": "workspace:*",
     "hono": "^4.6.17"
   },
   "devDependencies": {

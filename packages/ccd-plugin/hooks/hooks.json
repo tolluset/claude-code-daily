@@ -6,12 +6,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/smart-install.js",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/smart-install.cjs",
             "timeout": 300000
           },
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/../ccd-claude-plugin/dist/index.js SessionStart"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/lib/hooks.js SessionStart"
           }
         ]
       }
@@ -22,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/../ccd-claude-plugin/dist/index.js UserPromptSubmit"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/lib/hooks.js UserPromptSubmit"
           }
         ]
       }
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/../ccd-claude-plugin/dist/index.js Stop"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/lib/hooks.js Stop"
           }
         ]
       }

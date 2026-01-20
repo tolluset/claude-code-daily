@@ -1,6 +1,6 @@
 {
   "name": "ccd-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Claude Code Daily - Dashboard plugin for tracking daily Claude Code usage",
   "type": "module",
@@ -11,12 +11,16 @@
   "scripts": {
     "prebuild": "pnpm run build:deps",
     "build": "pnpm run copy:artifacts",
-    "build:deps": "pnpm run build:server && pnpm run build:mcp && pnpm run build:dashboard",
+    "build:deps": "pnpm run build:server && pnpm run build:mcp && pnpm run build:dashboard && pnpm run build:claude-plugin",
     "build:server": "cd ../ccd-server && pnpm run build",
     "build:mcp": "cd ../ccd-mcp && pnpm run build",
     "build:dashboard": "cd ../ccd-dashboard && pnpm run build",
+    "build:claude-plugin": "cd ../ccd-claude-plugin && pnpm run build",
     "copy:artifacts": "bash scripts/copy-artifacts.sh",
-    "clean": "rm -rf scripts/server.js scripts/mcp-server.cjs dashboard/dist"
+    "test:install": "bash scripts/test-plugin-install.sh",
+    "test:verify": "bash scripts/verify-plugin.sh",
+    "test:plugin": "pnpm run test:install && pnpm run test:verify",
+    "clean": "rm -rf scripts/server.js scripts/mcp-server.js dashboard/dist lib"
   },
   "dependencies": {}
 }
