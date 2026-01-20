@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "ccd": {
-      "command": "bun",
-      "args": ["packages/ccd-mcp/dist/index.js"]
-    }
-  }
-}
