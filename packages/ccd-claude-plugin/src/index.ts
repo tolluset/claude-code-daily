@@ -38,7 +38,7 @@ async function ensureServerRunning(): Promise<boolean> {
       }
 
       const serverPath = `${process.env.CLAUDE_PLUGIN_ROOT}/scripts/server.js`;
-      spawn('node', [serverPath], {
+      spawn('bun', [serverPath], {
         detached: true,
         stdio: 'ignore',
       }).unref();
