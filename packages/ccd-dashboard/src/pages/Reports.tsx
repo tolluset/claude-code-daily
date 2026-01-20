@@ -15,11 +15,11 @@ type TabType = 'daily' /* | 'ai' */;
 
 export function Reports() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient();
   const today = new Date();
 
-  const [activeTab, setActiveTab] = useState<TabType>('daily');
-  const [selectedReport, setSelectedReport] = useState<AIReport | null>(null);
+  const [activeTab/* , setActiveTab */] = useState<TabType>('daily');
+  // const [selectedReport, setSelectedReport] = useState<AIReport | null>(null);
 
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>(() => {
     const fromParam = searchParams.get('from');
@@ -47,6 +47,7 @@ export function Reports() {
       : undefined
   );
 
+  /* AI Reports hooks - temporarily disabled
   const { data: aiReports = [], isLoading: aiLoading, error: aiError } = useAIReports(
     activeTab === 'ai' ? 'daily' : undefined
   );
@@ -63,6 +64,7 @@ export function Reports() {
   const handleGenerate = () => {
     generateMutation.mutate();
   };
+  */
 
   const stats = dailyStats || [];
   const sortedStats = [...stats].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -71,17 +73,21 @@ export function Reports() {
     return <ErrorState title="Error loading reports" minHeight="min-h-screen" />;
   }
 
+  /* AI Reports error handling - temporarily disabled
   if (aiError && activeTab === 'ai') {
     return <ErrorState title="Error loading AI reports" minHeight="min-h-screen" />;
   }
+  */
 
   if (!dailyStats && activeTab === 'daily') {
     return <LoadingState minHeight="min-h-screen" />;
   }
 
+  /* AI Reports loading state - temporarily disabled
   if (aiLoading && activeTab === 'ai') {
     return <LoadingState minHeight="min-h-screen" />;
   }
+  */
 
   return (
     <div className="space-y-6">
@@ -89,7 +95,7 @@ export function Reports() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Reports</h1>
           <p className="text-muted-foreground mt-1">
-            {activeTab === 'daily' ? `${stats.length} days of activity` : `${aiReports.length} AI reports`}
+            {stats.length} days of activity
           </p>
         </div>
 
@@ -109,6 +115,7 @@ export function Reports() {
           />
         )}
 
+        {/* Generate Report button - temporarily disabled
         {activeTab === 'ai' && (
           <button
             onClick={handleGenerate}
@@ -119,6 +126,7 @@ export function Reports() {
             {generateMutation.isPending ? 'Generating...' : 'Generate Report'}
           </button>
         )}
+        */}
       </div>
 
       {/* Tabs temporarily hidden - AI Reports tab disabled until API key setup is simplified */}
